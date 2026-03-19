@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>賽特神話 RTP 測試工具</title>
+    <style>
+        body { font-family: 'Courier New', Courier, monospace; background-color: #1e1e1e; color: #00ff00; padding: 20px; }
+        h1 { color: #ffd700; }
+        button { background-color: #ff4500; color: white; border: none; padding: 12px 24px; font-size: 18px; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.2s; }
+        button:hover { background-color: #ff6600; }
+        button:disabled { background-color: #555; cursor: not-allowed; }
+        #log-container { background-color: #000; padding: 15px; border-radius: 5px; border: 1px solid #444; margin-top: 20px; height: 500px; overflow-y: auto; line-height: 1.6; }
+        .log-line { margin-bottom: 5px; }
+        .highlight { color: #00ffff; }
+        .warning { color: #ff9900; }
+    </style>
+</head>
+<body>
+    <h1>🎰 賽特規格 (10萬轉) RTP 測試工具</h1>
+    <p style="color:#aaa;">此工具將在背景使用您目前的 <code>engine.js</code> 進行極速模擬，自動跳過所有動畫。</p>
+    <button id="btn-start">🚀 開始 100,000 轉測試</button>
+    <div id="log-container"></div>
+
+    <script type="module">
+        import GameConfig from './config.js';
+        import { SlotEngine } from './engine.js';
+
+        const logContainer = document.getElementById('log-container');
+        function log(msg) {
+            const el = document.createElement('div');
+            el.className = 'log-line';
+            el.innerHTML = msg;
+            logContainer.appendChild(el);
+            logContainer.scrollTop = logContainer.scrollHeight; // 自動捲動到底部
+        }
+
+        document.getElementById('btn-start').addEventListener('click', async () => {
+            const btn = document.getElementById('btn-start');
+            btn.disabled = true;
+            logContainer.innerHTML = '';
+            log("🚀 初始化遊戲引擎中...");
+
+            let stats = {
+                totalBet: 0,
+                totalWin: 0,
+                baseSpins: 0,
+                fgTriggers: 0,
+                maxWins: 0,
+                highestWinAmount: 0
+            };
+
+            // 建立一個「空殼」Callbacks，讓引擎瞬間算完，不會卡在等待動畫
+            const dummyCallbacks = {
+                playSpinAnimation: async () => {}, 
+                playWinAnimation: async () => {}, 
+                playRefillAnimation: async () => {},
+                onFreeGameTrigger: (spins, scatterCount) => { stats.fgTriggers++; },
+                onFreeGameEnd: (totalWin) => { 
+                    if (totalWin > stats.highestWinAmount) stats.highestWinAmount = totalWin;
+                },
+                onMaxWin: async (totalWin) => { stats.maxWins++; },
+                onSpinComplete: () => {},
+                onBalanceChange: () => {},
+                onError: (msg) => { log(`<span style="color:red">錯誤: ${msg}</span>`); }
+            };
+
+            const engine = new SlotEngine(GameConfig, dummyCallbacks);
+            
+            const SPIN_COUNT = 100000;
+            const BET_SIZE = 100;
+            engine.state.bet = BET_SIZE;
+            
+            // 給予10億本金，確保引擎不會因為餘額不足而報錯停止
+            engine.state.credit = 1000000000; 
+            const startCredit = engine.state.credit;
+
+            log(`⏳ 開始進行 ${SPIN_COUNT.toLocaleString()} 次一般旋轉 (每轉押注 ${BET_SIZE})，請耐心等候...<br><br>`);
+
+            // 進入測試迴圈
+            for (let i = 1; i <= SPIN_COUNT; i++) {
+                stats.baseSpins++;
+                stats.totalBet += BET_SIZE;
+                
+                // 執行一次普通 Spin
+                await engine.startSpin(false); 
+
+                // 如果這把中了 Scatter 進入 FG，就用 while 迴圈把 FG 全部轉完
+                while (engine.state.isFreeGame) {
+                    await engine.startSpin(false);
+                }
+
+                // 每 10,000 轉輸出一次進度報告，並讓瀏覽器有時間喘息 (避免畫面當機)
+                if (i % 10000 === 0) {
+                    const currentWin = engine.state.credit - startCredit + stats.totalBet;
+                    const currentRTP = ((currentWin / stats.totalBet) * 100).toFixed(2);
+                    log(`...已執行 ${i.toLocaleString()} 轉 | 目前 RTP: <span class="highlight">${currentRTP}%</span>`);
+                    await new Promise(resolve => setTimeout(resolve, 0)); 
+                }
+            }
+
+            // 最終結算
+            const finalCredit = engine.state.credit;
+            stats.totalWin = finalCredit - startCredit + stats.totalBet;
+            const finalRTP = ((stats.totalWin / stats.totalBet) * 100).toFixed(2);
+            
+            log("<br>===============================================");
+            log("🎯 <b>測試完成最終報告</b> 🎯");
+            log(`總押注金額: ${stats.totalBet.toLocaleString()}`);
+            log(`總贏分金額: ${stats.totalWin.toLocaleString()}`);
+            log(`🔥 <b>最終 RTP (玩家回報率): <span style="color:#ff0; font-size: 1.4em;">${finalRTP}%</span></b>`);
+            log(`🎁 自然進入 FG 次數: ${stats.fgTriggers.toLocaleString()} 次 <span class="warning">(觸發率: 1 / ${Math.round(SPIN_COUNT/stats.fgTriggers)} 轉)</span>`);
+            log(`🏆 觸發 Max Win (51,000倍) 次數: ${stats.maxWins.toLocaleString()} 次`);
+            log(`👑 紀錄最高單局(含FG)贏分倍數: x${(stats.highestWinAmount / BET_SIZE).toLocaleString()}`);
+            log("===============================================");
+            
+            btn.disabled = false;
+        });
+    </script>
+</body>
+</html>

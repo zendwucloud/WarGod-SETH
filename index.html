@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dragon's Treasure (Modular Final)</title>
+    <style>
+        /* --- 1. 基礎設定 --- */
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
+        body { background-image: url('background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; display: flex; justify-content: center; align-items: center; font-family: 'Arial', sans-serif; user-select: none; -webkit-user-select: none; }
+        
+        .stage { position: relative; width: calc(100vh * 9 / 16); height: 100vh; max-width: 100vw; aspect-ratio: 720/1280; background-color: transparent; opacity: 0; transition: opacity 0.5s ease-in; }
+        .stage.loaded { opacity: 1; }
+
+        /* --- 2. 載入過場 --- */
+        #loading-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out; }
+        #loading-layer.hidden { opacity: 0; pointer-events: none; }
+        .loading-container { position: relative; width: calc(100vh * 9 / 16); height: 100vh; max-width: 100vw; aspect-ratio: 720/1280; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+        .loading-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+        .loading-bottom-ui { position: relative; z-index: 10; width: 70%; margin-bottom : 12%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: block; animation: pulseBtn 1.5s infinite; }
+        @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
+     
+        /* --- 3. 遊戲內部與特效 --- */
+        #bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: brightness(1.0); transition: filter 1.0s ease-in-out; }
+        .free-mode #bg-video { filter: brightness(1.0); }
+        .fire-effect { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 1s ease-in-out; box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); mix-blend-mode: overlay; }
+        .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
+        @keyframes firePulse { 0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); } 100% { box-shadow: inset 0 0 150px 60px rgba(255, 30, 0, 0.7); background-color: rgba(255, 60, 0, 0.2); } }
+
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('UI.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; z-index: 1; pointer-events: none; }
+        #fg-mask { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2500; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
+        #fg-mask.active { opacity: 1; pointer-events: auto; }
+        #coin-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2600; pointer-events: none; }
+
+        .phone-button { position: absolute; left: 2%; top: 2%; width: 9%; cursor: pointer; z-index: 950; transition: transform 0.1s; } .phone-button:active { transform: scale(0.9); }
+        .buy-button { position: absolute; left: 2%; top: 10.5%; width: 13%; cursor: pointer; z-index: 900; transition: transform 0.1s; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6)); } .buy-button:active { transform: scale(0.92); }
+        .free-mode .buy-button { display: none; }
+
+        /* --- 4. 捲軸與長條滾動系統 (Reel Strip) --- */
+        /* --- 4. 捲軸與長條滾動系統 (Reel Strip) [改為 6x5 賽特規格] --- */
+        .reel-viewport { position: absolute; top: calc(21.95% + 20px); left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10; }
+        .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; }
+        
+        /* 寬度從 18.89% 改為 16.5% 以容納 6 個卷軸 */
+        .column { position: relative; width: 16.5%; height: 100%; display: block; z-index: 1; }
+        
+        .reel-strip { 
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            display: flex; flex-direction: column-reverse; 
+            will-change: transform; 
+            transform: translate3d(0, 0, 0); 
+            backface-visibility: hidden; 
+            perspective: 1000px;
+            z-index: 5; 
+        }
+        .reel-strip.moving { transition: transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+        
+        .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; position: relative; z-index: 10; }
+        .reel-strip .symbol { flex: 1; height: auto; min-height: 0; position: relative; margin-bottom: -1px;}
+        
+        /* 高度從 33.333% 改為 20% 以容納 5 個 Row */
+        .column > .symbol { position: absolute; height: 20%; left: 0; transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1.3); }
+        
+        /* 新增 data-row 3 和 4 的定位 */
+        .symbol[data-row="0"] { bottom: 0; } 
+        .symbol[data-row="1"] { bottom: 20%; } 
+        .symbol[data-row="2"] { bottom: 40%; }
+        .symbol[data-row="3"] { bottom: 60%; }
+        .symbol[data-row="4"] { bottom: 80%; }
+
+        .sym-scatter { background-image: url('SCATTER.png'); width: 115%; margin-left: -7.5%; z-index: 200 !important; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8)); }
+        .sym-scatter.active { background-image: url('SCATTER_sprite.png'); background-size: 2800% 100%; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; z-index: 800 !important; }
+        @keyframes scatterRunFinal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        
+        .sym-wild { background-image: url('WILD.png'); width: 115%; margin-left: -7.5%; z-index: 200; filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); }
+        .sym-wild.active { background-image: url('dragon_sprite.png') !important; background-size: 2800% 100% !important; z-index: 999 !important; animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; }
+        @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
+        @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
+
+        .sym-mul { z-index: 180; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; }
+        .sym-20 { background-image: url('x2.png'); } .sym-21 { background-image: url('x10.png'); } .sym-22 { background-image: url('x25.png'); } .sym-23 { background-image: url('x100.png'); }
+        .sym-mul.active { background-image: url('eye_sprite.png') !important; background-size: 2800% 100% !important; z-index: 999 !important; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; }
+
+        @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px gold); } 100% { transform: scale(1); filter: brightness(1); } }
+        .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; transition: none !important; } 
+        
+        @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
+        .anim-explode { animation: explodeAction 0.4s ease-out forwards; z-index: 300 !important; transition: none !important; }
+        
+        .vfx-explosion { position: absolute; top: 50%; left: 42%; width: 20vh; height: 20vh; transform: translate(-50%, -50%); background-image: url('explosion_sprite.png'); background-size: 1500% 100%; animation: runExplosion 0.5s steps(14) forwards; z-index: 2000; pointer-events: none; }
+        @keyframes runExplosion { 0% { background-position: 0% 0%; opacity: 1; } 99% { opacity: 1; } 100% { background-position: 100% 0%; opacity: 0; } }
+
+        @keyframes landBounce { 0% { transform: translateY(-7.5%); opacity: 1; } 50% { transform: translateY(6%); } 75% { transform: translateY(-2%); } 100% { transform: translateY(0); } }
+        
+        .confetti { position: absolute; top: -5%; width: 1.5vh; height: 1.5vh; z-index: 2900; pointer-events: none; animation: fallDown linear forwards; }
+        @keyframes fallDown { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+
+        /* --- 5. UI 字體與數值面板 --- */
+        .value-text { color: #fff; font-weight: 900; font-family: 'Arial Black', sans-serif; text-shadow: 2px 2px 2px #000; position: absolute; z-index: 500; pointer-events: none; white-space: nowrap; }
+        #ui-credit { bottom: 7.6%; left: 16%; transform: translateX(-50%); font-size: 2.2vh; text-align: center; }
+        #ui-bet { bottom: 7.6%; right: 14%; transform: translateX(50%); font-size: 2.2vh; text-align: center; }
+        #ui-win { bottom: 3.3%; left: 38%; margin-left: 1.5vh; font-size: 3.5vh; color: #fff; text-shadow: 0 0 10px #ffcc00, 2px 2px 0 #000; }
+        
+        #ui-multiplier, #ui-free-spins { display: none; font-size: 2.5vh; color: #00FFFF; text-shadow: 0 0 10px #0000FF; bottom: 18%; position: absolute; z-index: 500;}
+        #ui-multiplier { right: 5%; } #ui-free-spins { left: 5%; }
+       
+
+        #ui-message-bar { position: absolute; bottom: calc(26.7% - 20px); left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
+        #msg-content { display: inline-block; white-space: nowrap; transition: transform 0.3s ease-out; padding: 0 10px; }
+        .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; }
+        .style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; }
+        .anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } @keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+/* 1. 跑馬燈與文字樣式 */
+.style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
+.style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
+.style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; letter-spacing: 1px; }
+/* 👇 補上這行專屬的紅色警告樣式 */
+.style-error { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #ff4500 !important; text-shadow: 0 0 10px #ff0000, 2px 2px 0px #000 !important; letter-spacing: 2px; }
+
+/* 2. 動畫效果 */
+.anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } 
+@keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+.anim-scroll { animation: scrollPass 10s linear forwards; } 
+@keyframes scrollPass { 
+    0% { transform: translateX(100%); opacity: 0; } 
+    15% { transform: translateX(0); opacity: 1; } 
+    85% { transform: translateX(0); opacity: 1; } 
+    100% { transform: translateX(-150%); opacity: 1; } 
+}
+
+        /* --- 6. 按鈕群組 --- */
+        .spin-trigger { position: absolute; bottom: 11.6%; left: 50%; transform: translateX(-50%); width: 18.8%; height: 11%; border-radius: 50%; cursor: pointer; z-index: 999; display: flex; justify-content: center; align-items: center; }
+        #spin-icon { width: 130%; height: 130%; object-fit: contain; animation: spinSlow 20s linear infinite; }
+        #spin-icon.fast { animation: spinFast 0.5s linear infinite !important; }
+        @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
+        @keyframes spinFast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } 
+
+        .click-area { position: absolute; z-index: 1000; cursor: pointer; border-radius: 50%; width: 3.8vh; height: 3.8vh; }
+        #btn-minus { left: 33.5%; bottom: 8.8%; transform: translateX(-50%); } 
+        #btn-plus { right: 33.4%; bottom: 8.8%; transform: translateX(50%); }
+        
+        #btn-auto { position: absolute; left: 50%; bottom: 7.5%; transform: translateX(-50%); width: 16%; height: 2.0%; border-radius: 50%; z-index: 1000; cursor: pointer; transition: all 0.3s; }
+        #btn-auto.active { background-color: rgba(255, 215, 0, 0.5); box-shadow: 0 0 15px #ffd700; border: 2px solid #ffd700; border-radius: 10px; }
+        #btn-turbo-toggle { position: absolute; right: 20.0%; bottom: 12.0%; width: 7%; height: 4%; border-radius: 50%; z-index: 2000; cursor: pointer; }
+        #btn-turbo-toggle.active { background-color: rgba(255, 215, 0, 0.5); box-shadow: 0 0 15px #ffd700; border: 2px solid #ffd700; }
+
+        /* --- 7. 選單與彈跳視窗 --- */
+        #fg-end-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2700; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
+        #fg-end-modal.active { opacity: 1; pointer-events: auto; }
+        #fg-end-modal .content-wrapper { text-align: center; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s forwards; width: 100%; }
+        #fg-end-modal .win-title { width: 80%; display: block; margin: 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
+        #fg-end-score { 
+            font-family: 'Arial Black', sans-serif; 
+            font-size: min(13vw, 8vh); /* 🎯 核心修復：動態縮放，保證字體不超框 */
+            color: #FFFF00; 
+            margin-top: -1vh; /* 微調與上方 YOU WIN 的間距 */
+            text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000; 
+            letter-spacing: 0px; /* 移除額外字距，節省空間 */
+            white-space: nowrap; /* 確保數字絕對不會被擠到第二行 */
+        }
+        @keyframes popIn { 0% { transform: scale(0) translateY(-10%); } 100% { transform: scale(1) translateY(-10%); } }
+
+        #menu-modal { position: absolute; bottom: -100%; left: 0; width: 100%; z-index: 2400; transition: bottom 0.3s; }
+        #menu-modal.active { bottom: 0; }
+        #menu-bg { width: 100%; display: block; }
+        .menu-click-area { position: absolute; cursor: pointer; }
+        #btn-menu-info { left: 14%; top: 23%; width: 13%; height: 9%; }
+        #btn-menu-setting { left: 33%; top: 23%; width: 13%; height: 9%; }
+        #btn-menu-home { left: 52%; top: 23%; width: 13%; height: 9%; }
+        #btn-menu-close-bottom { left: 38.5%; bottom: 1%; width: 23%; height: 5%; }
+
+        #info-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); z-index: 2600; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+        #info-modal.active { display: flex; opacity: 1; }
+        .info-content { background: linear-gradient(180deg, #6a0dad 0%, #3a005f 100%); width: 90%; height: 80%; border-radius: 20px; border: 2px solid #8a2be2; padding: 20px; overflow-y: auto; text-align: center; color: #fff; box-shadow: 0 0 20px rgba(138, 43, 226, 0.5); padding-right: 15px; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+        .info-content::-webkit-scrollbar { width: 12px; }
+        .info-content::-webkit-scrollbar-track { background: transparent; margin-block: 10px; }
+        .info-content::-webkit-scrollbar-thumb { background-color: rgba(255, 215, 0, 0.6); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+        .info-title { font-size: 3vh; color: #7cfc00; margin-bottom: 2vh; font-weight: bold; text-shadow: 0 0 5px #000;}
+        .paytable-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
+        .paytable-item { background: rgba(40, 10, 60, 0.6); border: 1px solid #9932cc; border-radius: 10px; padding: 5px; display: flex; align-items: center; justify-content: space-between; height: 14vh; box-shadow: inset 0 0 10px rgba(138, 43, 226, 0.2);}
+        .paytable-item img { width: auto; height: 85%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));}
+        .paytable-info { width: 56%; display: flex; flex-direction: column; justify-content: center; padding-right: 2px;}
+        .paytable-row { display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black', sans-serif; font-size: 3.6vh; }
+        .paytable-mul { color: #fff; font-weight: bold; }
+        .paytable-val { color: #ffd700; text-align: right; text-shadow: 1px 1px 0 #000; }
+        
+        .special-rule-block { grid-column: 1 / -1; background: linear-gradient(90deg, #2e004d 0%, #1a0b2e 100%); border: 2px solid #fff; border-radius: 12px; display: flex; align-items: center; padding: 8px 12px; margin-top: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); min-height: 14vh; }
+        .special-fixed-height { height: 14vh; }
+        .special-img { width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-right: 4%; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 2%; height: 100%; }
+        .special-img img { width: auto; height: 85%; object-fit: contain; }
+        .special-text { width: 76%; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        .rule-title { font-family: 'Arial Black', sans-serif; font-size: 2.0vh; margin-bottom: 4px; text-shadow: 2px 2px 0 #000; letter-spacing: 0.5px;}
+        .desc-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.5vh; font-weight: bold; color: #ddd; border-bottom: 1px dashed rgba(255,255,255,0.15); padding: 3px 0; }
+        .desc-row:last-child { border-bottom: none; }
+        .c-yellow { color: #ffd700; } .c-cyan { color: #00ffff; } .c-red { color: #ff4500; text-shadow: 0 0 2px #ff0000; } .c-white { color: #ffffff; } .c-gray { color: #aaaaaa; font-size: 1.3vh; }
+        
+        .close-btn { margin-top: 20px; background-color: #00bfff; padding: 10px 30px; border-radius: 50px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #008080; }
+
+        #setting-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 2600; display: none; align-items: center; justify-content: center; }
+        #setting-modal.active { display: flex; }
+        .setting-box { width: 80%; background: #9370db; border-radius: 15px; border: 3px solid #4b0082; padding: 20px; text-align: center; }
+        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; margin: 20px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #ffd700; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        #buy-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2800; display: none; align-items: center; justify-content: center; }
+        #buy-modal.active { display: flex; }
+        .buy-box { width: 75%; background: linear-gradient(180deg, #4b0082 0%, #2e004d 100%); border-radius: 15px; border: 2px solid #ffd700; padding: 25px 20px; text-align: center; }
+
+        .vfx-breathing { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2800; mix-blend-mode: screen; opacity: 0; transition: opacity 0.5s; }
+        .vfx-breathing.active { animation: redAlert 0.8s infinite alternate; opacity: 1; }
+        @keyframes redAlert { 0% { box-shadow: inset 0 0 30px 10px rgba(255, 0, 0, 0.2); } 100% { box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.8); } }
+    </style>
+</head>
+<body>
+
+    <div id="loading-layer">
+        <div class="loading-container">
+            <img src="loading.jpg" class="loading-visual" onerror="this.style.display='none'">
+            <div class="loading-bottom-ui"><div id="btn-start-game" style="display:block;">★ 點擊開始遊戲 ★</div></div>
+        </div>
+    </div>
+
+    <div class="stage" id="game-stage">
+        <video id="bg-video" autoplay loop muted playsinline><source src="bg.mp4" type="video/mp4"></video>
+        <div class="ui-layer"></div>
+        <div class="fire-effect"></div>
+        <div id="fg-mask"></div>
+        <canvas id="coin-canvas"></canvas>
+        
+        <img id="btn-phone" src="phone.png" class="phone-button">
+        <img id="btn-buy" src="buy_btn.png" class="buy-button">
+        
+        <div class="reel-viewport"><div class="grid-container" id="grid"></div></div>
+        
+        <div id="btn-turbo-toggle"></div>
+        <div id="ui-credit" class="value-text">100,000.00</div>
+        <div id="ui-win" class="value-text">0.00</div>
+        <div id="ui-bet" class="value-text">100.00</div>
+        <div id="ui-message-bar"><div id="msg-content"></div></div>
+        <div id="ui-multiplier" class="value-text">x1</div>
+        <div id="ui-free-spins" class="value-text">FREE SPINS: 0</div>
+        <div class="click-area" id="btn-minus"></div>
+        <div class="click-area" id="btn-plus"></div>
+        <div id="btn-auto"></div>
+        
+        <div class="spin-trigger" id="spinBtn"><img id="spin-icon" src="spin.png"></div>
+
+        <div id="fg-end-modal">
+            <div class="content-wrapper">
+                <img src="you-win.png" class="win-title" id="fg-title-img">
+                <div id="fg-end-score">0.00</div>
+            </div>
+        </div>
+
+        <div id="menu-modal">
+            <img id="menu-bg" src="gui-top.png" onerror="this.style.display='none'">
+            <div id="btn-menu-info" class="menu-click-area"></div>
+            <div id="btn-menu-setting" class="menu-click-area"></div>
+            <div id="btn-menu-home" class="menu-click-area"></div>
+            <div id="btn-menu-close-bottom" class="menu-click-area"></div>
+        </div>
+
+        <div id="info-modal">
+            <div class="info-content">
+                <div class="info-title">★ 遊戲賠率表 ★</div>
+                <div class="paytable-grid" id="paytable-container"></div>
+                <div class="close-btn" id="btn-close-info">關閉</div>
+            </div>
+        </div>
+
+        <div id="setting-modal">
+            <div class="setting-box">
+                <div class="info-title">遊戲設定</div>
+                <div style="color: white; font-weight: bold;">音樂/音效</div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="chk-sound" checked>
+                    <span class="slider"></span>
+                </label>
+                <div class="close-btn" id="btn-close-setting" style="margin-top: 10px;">確定</div>
+            </div>
+        </div>
+
+        <div id="buy-modal">
+            <div class="buy-box">
+                <div class="info-title" style="color: #ffd700;">購買特色遊戲</div>
+                <div style="color: #fff; margin: 20px 0; font-size: 2vh;">確定要花費 <span id="buy-price-text" style="color: #00ffff;">0</span> 購買嗎？</div>
+                <div style="display: flex; justify-content: space-around;">
+                    <div class="close-btn" id="btn-buy-cancel" style="background-color: #555;">取消</div>
+                    <div class="close-btn" id="btn-buy-confirm" style="background-color: #ff4500;">確定購買</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="audio-pool" style="display:none;">
+        <audio id="bgm_main" src="bgm_main.mp3" loop></audio>
+        <audio id="bgm_free" src="bgm_free.mp3" loop></audio>
+        <audio id="sfx_spin_1" src="sfx_spin.mp3"></audio>
+        <audio id="sfx_stop_1" src="sfx_stop.mp3"></audio>
+        <audio id="sfx_win_1" src="sfx_win.mp3"></audio>
+        <audio id="sfx_win_free_1" src="sfx_win_free.mp3"></audio>
+        <audio id="sfx_bigwin_1" src="sfx_bigwin.mp3"></audio>
+        <audio id="sfx_scatter_1" src="sfx_scatter.mp3"></audio>
+        <audio id="sfx_click_1" src="sfx_click.mp3"></audio>
+        <audio id="sfx_dragon_1" src="sfx_dragon.mp3"></audio>
+        <audio id="sfx_youWin_1" src="you-win.mp3"></audio>
+    </div>
+
+   <script type="module">
+        import GameConfig from './config.js';
+        import { SlotEngine } from './engine.js';
+        import { GUIController } from './gui.js';
+
+        let gui; // 宣告全域的 UI 控制器
+
+        const View = {
+            init: function() {
+                this.grid = document.getElementById('grid');
+                this.initGridDOM();
+                this.generatePaytable();
+            },
+            
+            initGridDOM: function() {
+                this.grid.innerHTML = '';
+                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
+                    let colDiv = document.createElement('div'); colDiv.className = 'column'; colDiv.id = `col-${c}`;
+                    this.grid.appendChild(colDiv);
+                    for(let r = 0; r < GameConfig.mechanics.rows; r++) {
+                        let el = this.createSymbol(Math.floor(Math.random() * 5) + 1); el.setAttribute('data-row', r);
+                        colDiv.appendChild(el);
+                    }
+                }
+            },
+            
+            createSymbol: function(type) {
+                let div = document.createElement('div');
+                if (type === 10) div.className = `symbol sym-wild`;
+                else if (type === 11) div.className = `symbol sym-scatter`;
+                else if (type >= 20) div.className = `symbol sym-mul sym-${type}`; 
+                else { div.className = `symbol sym-${type}`; if(GameConfig.assets.images.symbols[type]) div.style.backgroundImage = `url('${GameConfig.assets.images.symbols[type]}')`; }
+                return div;
+            },
+
+            generatePaytable: function() {
+                const container = document.getElementById('paytable-container');
+                container.innerHTML = '';
+                for (let i = 1; i <= 9; i++) {
+                    let s = GameConfig.symbols[i];
+                    let html = `<div class="paytable-item"><img src="s${i}.png"><div class="paytable-info">`; 
+                    if (s.payouts[5]) html += `<div class="paytable-row"><span class="paytable-mul">5x</span><span class="paytable-val">${s.payouts[5]}</span></div>`;
+                    if (s.payouts[4]) html += `<div class="paytable-row"><span class="paytable-mul">4x</span><span class="paytable-val">${s.payouts[4]}</span></div>`;
+                    if (s.payouts[3]) html += `<div class="paytable-row"><span class="paytable-mul">3x</span><span class="paytable-val">${s.payouts[3]}</span></div>`;
+                    html += `</div></div>`; container.innerHTML += html;
+                }
+
+                let wildHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #ff4500; background: linear-gradient(90deg, #3d0a0a 0%, #1a0000 100%);">
+                    <div class="special-img"><img src="WILD.png"><div class="c-red" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">WILD</div></div>
+                    <div class="special-text"><div class="rule-title" style="color:#ff4500;">百搭符號 (WILD)</div><div style="font-size:1.4vh; color:#fff; line-height:1.5;">● 可替代 <span class="c-cyan">SCATTER</span> 與 <span class="c-yellow">龍眼</span> 以外的所有符號。<br>● 僅出現在第 2, 3, 4, 5 卷軸。</div></div></div>`;
+                container.innerHTML += wildHtml;
+
+                let scatterHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);">
+                    <div class="special-img"><img src="SCATTER.png"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">SCATTER</div></div>
+                    <div class="special-text"><div class="rule-title" style="color:#00bfff;">免費遊戲 (Free Game)</div>
+                    <div class="desc-row"><span class="c-white">3 顆 寶箱</span> <span class="c-cyan">5 局</span></div>
+                    <div class="desc-row"><span class="c-white">4 顆 寶箱</span> <span class="c-cyan">10 局</span></div>
+                    <div class="desc-row"><span class="c-yellow">5 顆 寶箱</span> <span class="c-red">15 局 (極限大獎!)</span></div></div></div>`;
+                container.innerHTML += scatterHtml;
+
+                let dragonHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #ffd700; background: linear-gradient(90deg, #332200 0%, #1a1100 100%);">
+                    <div class="special-img"><img src="x100.png" style="filter: drop-shadow(0 0 5px gold);"><div class="c-yellow" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">龍眼倍數</div></div>
+                    <div class="special-text"><div class="rule-title" style="color:#ffd700;">龍眼倍數 (Multiplier)</div>
+                    <div class="desc-row"><span class="c-gray">5局 (3寶箱)</span> <span>常見 <span class="c-cyan">x2</span>, 有機會 <span class="c-cyan">x10</span></span></div>
+                    <div class="desc-row"><span class="c-gray">10局 (4寶箱)</span> <span>常見 <span class="c-cyan">x10</span>, 有機會 <span class="c-yellow">x25</span></span></div>
+                    <div class="desc-row"><span class="c-gray">15局 (5寶箱)</span> <span>解鎖 <span class="c-red" style="font-size:1.6vh; text-shadow:0 0 5px red;">x100</span> 頂級倍數!</span></div>
+                    <div style="font-size:1.1vh; color:#999; margin-top:3px; font-style:italic; text-align:right;">*倍數僅乘算當局贏分</div></div></div>`;
+                container.innerHTML += dragonHtml;
+                
+                let rulesHtml = `<div class="special-rule-block" style="display:block; background:rgba(0,0,0,0.5); border:1px solid #aaa; margin-top:15px; padding:10px;">
+                    <div class="info-title" style="font-size:2.2vh; margin-bottom:10px; color:#7cfc00;">★ 遊戲規則 ★</div>
+                    <div style="font-size:1.4vh; line-height:1.6; color:#fff; text-align:left;">
+                        <div style="margin-bottom:8px; border-left: 4px solid #ffd700; padding-left:8px;"><strong>243 路 (Ways):</strong> 由左至右連續出現三個以上即中獎。<br><span style="color: #aaa; font-size: 1.4vh;">(若單一卷軸出現多個相同符號，路數將會相乘，贏分更多!)</span></div>
+                        <div style="margin-bottom:8px; border-left: 4px solid #ffd700; padding-left:8px;"><strong>特殊倍數:</strong> 龍眼倍數只會出現在免費遊戲內，將與當局所有贏分相乘。多個龍眼倍數會相加計算。</div>
+                        <div style="margin-bottom:8px; border-left: 4px solid #ffd700; padding-left:8px;"><strong>免費遊戲:</strong> 3個以上 SCATTER 觸發免費遊戲後，AKQJ等低分符號將會被移除，龍眼倍數會因免費局數不同產生倍數變化。</div>
+                    </div></div>`;
+                container.innerHTML += rulesHtml;
+            },
+
+            wait: function(ms) { return new Promise(resolve => setTimeout(resolve, ms)); },
+            getSymbolEl: function(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
+        };
+
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            if (data.type === 'initBalance') {
+                engine.state.credit = data.value;
+                document.getElementById('ui-credit').innerText = engine.state.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
+            } 
+            else if (data.type === 'updateSettings') { window.AudioMgr.updateSettings(data.music, data.sfx); }
+        });
+
+        function syncBalanceToLobby() {
+            if (window.parent) window.parent.postMessage({ type: 'updateBalance', value: engine.state.credit }, '*');
+        }
+
+        const engine = new SlotEngine(GameConfig, {
+            onBalanceChange: (val) => { 
+                document.getElementById('ui-credit').innerText = val.toLocaleString('en-US', {minimumFractionDigits: 2}); 
+                syncBalanceToLobby(); 
+            },
+
+            onError: (msg) => {
+                window.AudioMgr.playSFX('click'); 
+                gui.updateMessage(msg, "style-error", "anim-pop"); 
+                setTimeout(() => { if (!engine.state.isSpinning) document.getElementById('ui-message-bar').style.display = 'none'; }, 3000);
+                gui.isAutoPlay = false; 
+                document.getElementById('btn-auto').classList.remove('active');
+            },
+            
+            onSpinStart: (isBuyFeature) => {
+                if(!gui.isAutoPlay) window.AudioMgr.playSFX('spin');
+                document.getElementById('spin-icon').classList.add('fast');
+                document.getElementById('ui-message-bar').style.display = 'none';
+                document.getElementById('ui-win').innerText = "0.00";
+                
+                if (window.parent && !engine.state.isFreeGame) {
+                    let cost = isBuyFeature ? engine.state.bet * 100 : engine.state.bet;
+                    window.parent.postMessage({ type: 'bet', amount: cost }, '*');
+                }
+
+                if (!engine.state.isFreeGame) gui.updateMessage("GOOD LUCK!", "style-promo", "anim-pop");
+                else gui.updateMessage(`FREE SPINS: ${engine.state.freeSpinsLeft}`, "style-blue", "anim-pop");
+            },
+            
+            onFreeSpinUpdate: (left) => { document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${left}`; },
+
+            playSpinAnimation: async (gridData) => {
+                const spinPromises = [];
+                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
+                    const p = new Promise(async (resolve) => {
+                        let delay = gui.isTurboMode ? 0 : c * 300; 
+                        await View.wait(delay);
+
+                        let colDiv = document.getElementById(`col-${c}`);
+                        let oldElements = colDiv.querySelectorAll('.column > .symbol');
+                        let currentSyms = [];
+                        oldElements.forEach(el => {
+                            let match = el.className.match(/sym-(\d+)/);
+                            if (match) currentSyms.push(parseInt(match[1]));
+                            else if (el.classList.contains('sym-wild')) currentSyms.push(10);
+                            else if (el.classList.contains('sym-scatter')) currentSyms.push(11);
+                            else currentSyms.push(1);
+                        });
+                        if (currentSyms.length === 0) currentSyms = [1, 2, 3];
+
+                        let fillerSyms = [];
+                        for(let i=0; i<6; i++) { fillerSyms.push(Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1); }
+
+                        let targetSyms = gridData[c];
+                        let stripContent = [...currentSyms, ...fillerSyms, ...targetSyms];
+                        let stripDiv = document.createElement('div');
+                        stripDiv.className = 'reel-strip';
+                        stripContent.forEach((type) => { let el = View.createSymbol(type); stripDiv.appendChild(el); });
+
+                        let totalSymbols = stripContent.length;
+                        let visibleSymbols = GameConfig.mechanics.rows;
+                        stripDiv.style.height = `${(totalSymbols / visibleSymbols) * 100}%`;
+
+                        colDiv.appendChild(stripDiv);
+                        oldElements.forEach(el => el.remove()); 
+                        void stripDiv.offsetWidth; 
+
+                        let movePct = ((currentSyms.length + fillerSyms.length) / totalSymbols) * 100;
+                        stripDiv.classList.add('moving');
+                        stripDiv.style.transform = `translateY(${movePct}%)`;
+
+                        let spinTime = gui.isTurboMode ? 1000 : 2000;
+                        if(gui.isTurboMode) stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+                        else stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
+
+                        await View.wait(spinTime);
+
+                        stripDiv.style.transition = 'none';
+                        window.AudioMgr.playSFX('stop');
+                        if(!gui.isTurboMode) await View.wait(100);
+
+                        colDiv.innerHTML = '';
+                        targetSyms.forEach((type, r) => {
+                            let el = View.createSymbol(type);
+                            el.setAttribute('data-row', r);
+                            if(!gui.isTurboMode) el.style.animation = 'landBounce 0.3s ease-out';
+                            colDiv.appendChild(el);
+                        });
+                        resolve();
+                    });
+                    spinPromises.push(p);
+                }
+                await Promise.all(spinPromises);
+                await View.wait(gui.isTurboMode ? 100 : 300);
+            },
+
+            playWinAnimation: async (matches, winAmount, spinMultipliers, totalWin) => {
+                gui.updateMessage("WIN " + winAmount.toLocaleString('en-US', {minimumFractionDigits: 2}), "style-win", "anim-pop");
+                const winEl = document.getElementById('ui-win');
+                winEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
+
+                if (engine.state.isFreeGame) {
+                    let currentMul = spinMultipliers > 0 ? spinMultipliers : 1;
+                    document.getElementById('ui-multiplier').innerText = `x${currentMul}`;
+                }
+
+                if (engine.state.isFreeGame) window.AudioMgr.playSFX('win_free');
+                else if (winAmount > engine.state.bet * 10) window.AudioMgr.playSFX('bigwin');
+                else window.AudioMgr.playSFX('win');
+
+                if (winAmount >= engine.state.bet * 10) { window.CoinManager.fire(50, 0.5); } 
+                else if (winAmount > 0) { window.CoinManager.fire(15, 0.5); }
+
+                let hasWild = false;
+                matches.forEach(key => {
+                    let [c, r] = key.split(','); let type = engine.state.gridData[c][r];
+                    if(type === 10) hasWild = true;
+                    let el = View.getSymbolEl(c, r);
+                    if(el) {
+                        el.style.animation = 'none'; el.style.transform = 'none';
+                        void el.offsetWidth; 
+                        el.style.animation = ''; el.style.transform = '';
+                        el.classList.add('anim-win');
+                        if (type === 10 || (type >= 1 && type <= 5) || (type >= 20 && type <= 23) || type === 11) el.classList.add('active');
+                    }
+                });
+                if(hasWild) window.AudioMgr.playSFX('dragon');
+
+                await View.wait(1500); 
+
+                matches.forEach(key => {
+                    let [c, r] = key.split(','); let el = View.getSymbolEl(c, r);
+                    if(el) { 
+                        el.classList.remove('anim-win', 'active'); el.classList.add('anim-explode'); 
+                        let boom = document.createElement('div'); boom.className = 'vfx-explosion'; el.appendChild(boom); 
+                    }
+                });
+                await View.wait(400);
+            }, 
+
+            playRefillAnimation: async (newGridData, matches) => {
+                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
+                    let colDiv = document.getElementById(`col-${c}`);
+                    let survivors = [];
+                    for(let r = 0; r < GameConfig.mechanics.rows; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ oldR: r }); }
+                    
+                    colDiv.innerHTML = ''; 
+                    let targetSyms = newGridData[c];
+                    
+                    survivors.forEach((item, index) => {
+                        let newR = index; 
+                        let el = View.createSymbol(targetSyms[newR]);
+                        el.setAttribute('data-row', newR);
+                        let delta = item.oldR - newR; 
+                        el.style.transform = `translateY(-${delta * 100}%)`;
+                        colDiv.appendChild(el);
+                        void el.offsetWidth; 
+                        el.style.transform = `translateY(0)`; 
+                    });
+
+                    let missing = GameConfig.mechanics.rows - survivors.length;
+                    for(let k = 0; k < missing; k++) {
+                        let newR = survivors.length + k;
+                        let el = View.createSymbol(targetSyms[newR]);
+                        el.setAttribute('data-row', newR);
+                        let dropDist = (GameConfig.mechanics.rows + k) - newR; 
+                        el.style.transform = `translateY(-${dropDist * 100}%)`;
+                        colDiv.appendChild(el);
+                        void el.offsetWidth;
+                        el.style.transform = `translateY(0)`;
+                    }
+                }
+                await View.wait(400); 
+                window.AudioMgr.playSFX('stop');
+                await View.wait(300); 
+            },
+
+            onMaxWin: async (totalWin) => {
+                const modal = document.getElementById('fg-end-modal');
+                const scoreEl = document.getElementById('fg-end-score');
+                const titleImg = document.getElementById('fg-title-img');
+                
+                if(titleImg) titleImg.src = 'max-win.png';
+                scoreEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
+                
+                modal.classList.add('active');
+                window.AudioMgr.playSFX('scatter'); window.AudioMgr.playSFX('bigwin');
+                
+                let breath = document.querySelector('.vfx-breathing');
+                if(!breath) { breath = document.createElement('div'); breath.className = 'vfx-breathing'; document.querySelector('.stage').appendChild(breath); }
+                breath.classList.add('active');
+                for(let i=0; i<100; i++) { setTimeout(window.spawnConfetti, i * 20); } 
+
+                let fountain = setInterval(() => { window.CoinManager.fire(150, 0.1); window.CoinManager.fire(150, 0.5); window.CoinManager.fire(150, 0.9); }, 200);
+                await View.wait(8000); 
+                
+                clearInterval(fountain);
+                breath.classList.remove('active');
+                modal.classList.remove('active');
+                if(titleImg) titleImg.src = 'you-win.png'; 
+            },
+
+            onFreeGameTrigger: async (spins, scatterCount) => {
+                window.AudioMgr.playSFX('scatter');
+                document.querySelectorAll('.sym-scatter').forEach(el => {
+                    el.style.animation = 'none'; el.style.transform = 'none';
+                    void el.offsetWidth; 
+                    el.style.animation = ''; el.style.transform = '';
+                    el.classList.add('active');
+                });
+                
+                gui.updateMessage(`★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`, "style-blue", "anim-pop");
+                
+                await View.wait(3000);
+                document.getElementById('ui-message-bar').style.display = 'none';
+                document.body.classList.add('free-mode');
+                window.AudioMgr.playBGM('free');
+                document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${spins}`;
+                
+                engine.startSpin(); 
+            },
+
+            onFreeGameEnd: async (totalWin) => {
+                const modal = document.getElementById('fg-end-modal');
+                const scoreEl = document.getElementById('fg-end-score');
+                scoreEl.innerText = totalWin.toLocaleString('en-US', {minimumFractionDigits: 2});
+                
+                modal.classList.add('active');
+                let fountain = null;
+                
+                if (totalWin >= engine.state.bet * 20) {
+                    window.AudioMgr.playSFX('bigwin');
+                    fountain = setInterval(() => { window.CoinManager.fire(40, 0.5); }, 200);
+                    for(let i=0; i<50; i++) { setTimeout(window.spawnConfetti, i * 40); }
+                } 
+                else if (totalWin >= engine.state.bet * 5) {
+                    window.AudioMgr.playSFX('bigwin');
+                    window.CoinManager.fire(100, 0.5);
+                    setTimeout(() => window.CoinManager.fire(80, 0.5), 600);
+                    window.spawnConfetti();
+                } 
+                else if (totalWin > 0) {
+                    window.AudioMgr.playSFX('win_free');
+                    window.CoinManager.fire(30, 0.5);
+                } 
+                else { window.AudioMgr.playSFX('click'); }
+
+                await View.wait(5000);
+                if (fountain) clearInterval(fountain);
+                
+                modal.classList.remove('active');
+                document.body.classList.remove('free-mode');
+                window.AudioMgr.playBGM('main');
+                document.getElementById('spin-icon').classList.remove('fast');
+                
+                if (gui.isAutoPlay) { setTimeout(() => engine.startSpin(), 800); }
+            },
+
+            onSpinComplete: () => {
+                document.getElementById('spin-icon').classList.remove('fast');
+                if(gui.isAutoPlay || engine.state.isFreeGame) { setTimeout(() => engine.startSpin(), 800); }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. 預載素材
+            const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
+            preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
+            
+            // 2. 初始化畫面
+            View.init();
+
+            // 3. 將引擎交給 GUIController，它會自動幫我們接管所有按鈕和 UI！
+            gui = new GUIController(engine);
+        });
+    </script>
+</body>
+</html> 
