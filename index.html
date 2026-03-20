@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dragon's Treasure (Modular Final)</title>
+    <title>War God SETH</title>
     <style>
         /* --- 1. 基礎設定 --- */
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
@@ -22,11 +22,16 @@
         @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
      
         /* --- 3. 遊戲內部與特效 --- */
-        #bg-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: brightness(1.0); transition: filter 1.0s ease-in-out; }
-        .free-mode #bg-video { filter: brightness(1.0); }
-        .fire-effect { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 1s ease-in-out; box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); mix-blend-mode: overlay; }
-        .free-mode .fire-effect { opacity: 1; animation: firePulse 2s infinite alternate ease-in-out; }
-        @keyframes firePulse { 0% { box-shadow: inset 0 0 80px 20px rgba(255, 69, 0, 0.4); background-color: rgba(255, 0, 0, 0.1); } 100% { box-shadow: inset 0 0 150px 60px rgba(255, 30, 0, 0.7); background-color: rgba(255, 60, 0, 0.2); } }
+        .game-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: brightness(1.0); }
+        .free-mode .game-bg { filter: brightness(1.0); }
+        
+        /* 賽特專屬：藍色閃電特效 */
+        .fire-effect { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 1s ease-in-out; box-shadow: inset 0 0 50px 20px rgba(0, 0, 0, 0); mix-blend-mode: screen; }
+        .free-mode .fire-effect { opacity: 1; animation: lightningPulse 1.2s infinite alternate ease-in-out; }
+        @keyframes lightningPulse { 
+            0% { box-shadow: inset 0 0 80px 20px rgba(44, 76, 255, 0.3); background-color: rgba(42, 56, 255, 0.05); } 
+            100% { box-shadow: inset 0 0 150px 60px rgba(35, 94, 255, 0.6); background-color: rgba(36, 113, 255, 0.15); } 
+        }
 
         .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('UI.png'); background-size: 100% 100%; background-position: center; background-repeat: no-repeat; z-index: 1; pointer-events: none; }
         #fg-mask { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2500; opacity: 0; pointer-events: none; transition: opacity 0.5s ease-in-out; }
@@ -37,12 +42,9 @@
         .buy-button { position: absolute; left: 2%; top: 10.5%; width: 13%; cursor: pointer; z-index: 900; transition: transform 0.1s; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6)); } .buy-button:active { transform: scale(0.92); }
         .free-mode .buy-button { display: none; }
 
-        /* --- 4. 捲軸與長條滾動系統 (Reel Strip) --- */
-        /* --- 4. 捲軸與長條滾動系統 (Reel Strip) [改為 6x5 賽特規格] --- */
+        /* --- 4. 捲軸與長條滾動系統 --- */
         .reel-viewport { position: absolute; top: calc(21.95% + 20px); left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10; }
         .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; }
-        
-        /* 寬度從 18.89% 改為 16.5% 以容納 6 個卷軸 */
         .column { position: relative; width: 16.5%; height: 100%; display: block; z-index: 1; }
         
         .reel-strip { 
@@ -58,11 +60,8 @@
         
         .symbol { width: 100%; background-size: 100% 100%; background-repeat: no-repeat; background-position: center center; position: relative; z-index: 10; }
         .reel-strip .symbol { flex: 1; height: auto; min-height: 0; position: relative; margin-bottom: -1px;}
-        
-        /* 高度從 33.333% 改為 20% 以容納 5 個 Row */
         .column > .symbol { position: absolute; height: 20%; left: 0; transition: transform 0.4s cubic-bezier(0.5, 0, 0.2, 1.3); }
         
-        /* 新增 data-row 3 和 4 的定位 */
         .symbol[data-row="0"] { bottom: 0; } 
         .symbol[data-row="1"] { bottom: 20%; } 
         .symbol[data-row="2"] { bottom: 40%; }
@@ -105,31 +104,18 @@
         #ui-multiplier, #ui-free-spins { display: none; font-size: 2.5vh; color: #00FFFF; text-shadow: 0 0 10px #0000FF; bottom: 18%; position: absolute; z-index: 500;}
         #ui-multiplier { right: 5%; } #ui-free-spins { left: 5%; }
        
-
         #ui-message-bar { position: absolute; bottom: calc(26.7% - 20px); left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
         #msg-content { display: inline-block; white-space: nowrap; transition: transform 0.3s ease-out; padding: 0 10px; }
-        .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; }
-        .style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; }
-        .anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } @keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        
-/* 1. 跑馬燈與文字樣式 */
-.style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
-.style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
-.style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; letter-spacing: 1px; }
-/* 👇 補上這行專屬的紅色警告樣式 */
-.style-error { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #ff4500 !important; text-shadow: 0 0 10px #ff0000, 2px 2px 0px #000 !important; letter-spacing: 2px; }
+        .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
+        .style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
+        .style-blue { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #00FFFF !important; text-shadow: 0 0 10px #0000FF, 2px 2px 0px #000080 !important; letter-spacing: 1px; }
+        .style-error { font-family: 'Arial Black', sans-serif !important; font-size: 3.2vh !important; color: #ff4500 !important; text-shadow: 0 0 10px #ff0000, 2px 2px 0px #000 !important; letter-spacing: 2px; }
 
-/* 2. 動畫效果 */
-.anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } 
-@keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .anim-pop { animation: msgPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); } 
+        @keyframes msgPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-.anim-scroll { animation: scrollPass 10s linear forwards; } 
-@keyframes scrollPass { 
-    0% { transform: translateX(100%); opacity: 0; } 
-    15% { transform: translateX(0); opacity: 1; } 
-    85% { transform: translateX(0); opacity: 1; } 
-    100% { transform: translateX(-150%); opacity: 1; } 
-}
+        .anim-scroll { animation: scrollPass 10s linear forwards; } 
+        @keyframes scrollPass { 0% { transform: translateX(100%); opacity: 0; } 15% { transform: translateX(0); opacity: 1; } 85% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-150%); opacity: 1; } }
 
         /* --- 6. 按鈕群組 --- */
         .spin-trigger { position: absolute; bottom: 11.6%; left: 50%; transform: translateX(-50%); width: 18.8%; height: 11%; border-radius: 50%; cursor: pointer; z-index: 999; display: flex; justify-content: center; align-items: center; }
@@ -152,15 +138,7 @@
         #fg-end-modal.active { opacity: 1; pointer-events: auto; }
         #fg-end-modal .content-wrapper { text-align: center; transform: scale(0.8) translateY(-10%); animation: popIn 0.5s forwards; width: 100%; }
         #fg-end-modal .win-title { width: 80%; display: block; margin: 0 auto; filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)); }
-        #fg-end-score { 
-            font-family: 'Arial Black', sans-serif; 
-            font-size: min(13vw, 8vh); /* 🎯 核心修復：動態縮放，保證字體不超框 */
-            color: #FFFF00; 
-            margin-top: -1vh; /* 微調與上方 YOU WIN 的間距 */
-            text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000; 
-            letter-spacing: 0px; /* 移除額外字距，節省空間 */
-            white-space: nowrap; /* 確保數字絕對不會被擠到第二行 */
-        }
+        #fg-end-score { font-family: 'Arial Black', sans-serif; font-size: min(13vw, 8vh); color: #FFFF00; margin-top: -1vh; text-shadow: 3px 0 0 #ff3000, -3px 0 0 #ff3000, 0 3px 0 #ff3000, 0 -3px 0 #ff3000, 2px 2px 0 #ff3000; letter-spacing: 0px; white-space: nowrap; }
         @keyframes popIn { 0% { transform: scale(0) translateY(-10%); } 100% { transform: scale(1) translateY(-10%); } }
 
         #menu-modal { position: absolute; bottom: -100%; left: 0; width: 100%; z-index: 2400; transition: bottom 0.3s; }
@@ -213,9 +191,13 @@
         #buy-modal.active { display: flex; }
         .buy-box { width: 75%; background: linear-gradient(180deg, #4b0082 0%, #2e004d 100%); border-radius: 15px; border: 2px solid #ffd700; padding: 25px 20px; text-align: center; }
 
+        /* 賽特專屬：極限大獎藍色風暴警告 */
         .vfx-breathing { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2800; mix-blend-mode: screen; opacity: 0; transition: opacity 0.5s; }
-        .vfx-breathing.active { animation: redAlert 0.8s infinite alternate; opacity: 1; }
-        @keyframes redAlert { 0% { box-shadow: inset 0 0 30px 10px rgba(255, 0, 0, 0.2); } 100% { box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 0.8); } }
+        .vfx-breathing.active { animation: blueAlert 0.8s infinite alternate; opacity: 1; }
+        @keyframes blueAlert { 
+            0% { box-shadow: inset 0 0 30px 10px rgba(38, 89, 255, 0.2); } 
+            100% { box-shadow: inset 0 0 100px 50px rgba(20, 122, 255, 0.8); } 
+        }
     </style>
 </head>
 <body>
@@ -228,7 +210,9 @@
     </div>
 
     <div class="stage" id="game-stage">
-        <video id="bg-video" autoplay loop muted playsinline><source src="bg.mp4" type="video/mp4"></video>
+        <video id="bg-main" class="game-bg" autoplay loop muted playsinline style="opacity: 1; transition: opacity 1s ease-in-out;"><source src="bg.mp4" type="video/mp4"></video>
+        <video id="bg-free" class="game-bg" autoplay loop muted playsinline style="opacity: 0; transition: opacity 1s ease-in-out;"><source src="FGbg.mp4" type="video/mp4"></video>
+        
         <div class="ui-layer"></div>
         <div class="fire-effect"></div>
         <div id="fg-mask"></div>
@@ -407,6 +391,21 @@
 
         function syncBalanceToLobby() {
             if (window.parent) window.parent.postMessage({ type: 'updateBalance', value: engine.state.credit }, '*');
+        }
+
+        // 極簡化交叉淡出引擎
+        function crossfadeBackground(fromVideoId, toVideoId) {
+            const fromVideo = document.getElementById(fromVideoId);
+            const toVideo = document.getElementById(toVideoId);
+            if (!fromVideo || !toVideo) return;
+            
+            toVideo.currentTime = 0;
+            let playPromise = toVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(e => console.log("Video play warning:", e));
+            }
+            toVideo.style.opacity = '1';
+            fromVideo.style.opacity = '0';
         }
 
         const engine = new SlotEngine(GameConfig, {
@@ -625,9 +624,11 @@
                 await View.wait(3000);
                 document.getElementById('ui-message-bar').style.display = 'none';
                 document.body.classList.add('free-mode');
-                window.AudioMgr.playBGM('free');
                 document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${spins}`;
                 
+                // 觸發透明度無縫切換與音樂同步
+                crossfadeBackground('bg-main', 'bg-free');
+                window.AudioMgr.playBGM('free');
                 engine.startSpin(); 
             },
 
@@ -661,8 +662,11 @@
                 
                 modal.classList.remove('active');
                 document.body.classList.remove('free-mode');
-                window.AudioMgr.playBGM('main');
                 document.getElementById('spin-icon').classList.remove('fast');
+                
+                // 觸發透明度無縫切回主畫面與音樂同步
+                window.AudioMgr.playBGM('main'); 
+                setTimeout(() => { crossfadeBackground('bg-free', 'bg-main'); }, 50);
                 
                 if (gui.isAutoPlay) { setTimeout(() => engine.startSpin(), 800); }
             },
@@ -674,16 +678,11 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. 預載素材
             const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
             preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
-            
-            // 2. 初始化畫面
             View.init();
-
-            // 3. 將引擎交給 GUIController，它會自動幫我們接管所有按鈕和 UI！
             gui = new GUIController(engine);
         });
     </script>
 </body>
-</html> 
+</html>
