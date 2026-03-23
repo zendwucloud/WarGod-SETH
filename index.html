@@ -698,53 +698,29 @@
             if(audioMain) audioMain.volume = 0.8; 
             if(audioFree) audioFree.volume = 1.0; 
 
-            // ▼ 修正：iOS 終極音效解鎖器 (同步阻斷法，解決爆音與 BGM 暫停問題) ▼
             let audioUnlocked = false;
             const unlockAudio = () => {
                 if (audioUnlocked) return;
                 audioUnlocked = true;
-                
                 document.querySelectorAll('audio').forEach(audio => {
-                    if (audio.id === 'bgm_main') {
-                        // 1. 主音樂：直接正常播放，絕對不暫停它
-                        audio.volume = 0.8;
-                        let p = audio.play();
-                        if (p !== undefined) p.catch(e => {});
-                    } else {
-                        // 2. 其他音效：瞬間觸發播放後「立刻」暫停 (絕對不等待 Promise！)
-                        audio.muted = true; // 雙重防護
-                        audio.volume = 0;   // 雙重防護
-                        
-                        let p = audio.play();
-                        if (p !== undefined) {
-                            // 攔截 play 被下一行 pause 中斷時產生的 AbortError 報錯
-                            p.catch(e => {}); 
+                    if (audio.paused) {
+                        audio.muted = true; 
+                        let playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                audio.pause();      
+                                audio.muted = false; 
+                                audio.currentTime = 0;
+                            }).catch(e => {});
                         }
-                        
-                        audio.pause();       // ⚠️ 關鍵：同步立刻暫停，聲音絕對出不來
-                        audio.currentTime = 0;
-                        
-                        // 恢復正常設定，讓遊戲中可以正常發聲
-                        audio.muted = false;
-                        if (audio.id === 'bgm_free') audio.volume = 1.0;
-                        else audio.volume = 1.0;
                     }
                 });
-
                 document.body.removeEventListener('touchstart', unlockAudio);
                 document.body.removeEventListener('click', unlockAudio);
             };
 
-            // 綁定到所有可能的初始互動，特別是「開始遊戲」按鈕
             document.body.addEventListener('touchstart', unlockAudio, { once: true });
             document.body.addEventListener('click', unlockAudio, { once: true });
-            
-            const startBtn = document.getElementById('btn-start-game');
-            if(startBtn) {
-                startBtn.addEventListener('click', unlockAudio);
-                startBtn.addEventListener('touchstart', unlockAudio);
-            }
-            // ▲ 新增結束 ▲
         });
     </script>
 </body>
