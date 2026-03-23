@@ -43,8 +43,8 @@
         .free-mode .buy-button { display: none; }
 
         /* --- 4. 捲軸與長條滾動系統 --- */
-        .reel-viewport { position: absolute; top: calc(21.95% + 20px); left: 0; width: 100%; height: 43.59%; overflow: hidden; z-index: 10; }
-        .grid-container { width: 90.41%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; }
+        .reel-viewport { position: absolute; top: calc(21.2% + 20px); left: 0; width: 100%; height: 45.0%; overflow: hidden; z-index: 10; }
+        .grid-container { width: 93.5%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; }
         .column { position: relative; width: 16.5%; height: 100%; display: block; z-index: 1; }
         
         .reel-strip { 
@@ -71,17 +71,13 @@
         .sym-scatter { background-image: url('SCATTER.png'); width: 115%; margin-left: -7.5%; z-index: 200 !important; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8)); }
         .sym-scatter.active { background-image: url('SCATTER_sprite.png'); background-size: 2800% 100%; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate; z-index: 800 !important; }
         @keyframes scatterRunFinal { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
-        
-        .sym-wild { background-image: url('WILD.png'); width: 115%; margin-left: -7.5%; z-index: 200; filter: drop-shadow(0 0 5px rgba(255, 50, 50, 0.5)); }
-        .sym-wild.active { background-image: url('dragon_sprite.png') !important; background-size: 2800% 100% !important; z-index: 999 !important; animation: dragonPlay 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; }
-        @keyframes dragonPlay { 0% { background-position: 0% 0%; } 100% { background-position: 100% 0%; } }
         @keyframes wildPop { 0% { transform: scale(1); filter: brightness(1); } 100% { transform: scale(1.15); filter: brightness(1.5); } }
 
-        .sym-mul { z-index: 180; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.9)); background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; }
+        .sym-mul { z-index: 180; width: 125%; margin-left: -12.5%; filter: drop-shadow(0 0 8px rgba(0, 110, 255, 0.9)); background-size: 100% 100%; background-position: center bottom; background-repeat: no-repeat; }
         .sym-20 { background-image: url('x2.png'); } .sym-21 { background-image: url('x10.png'); } .sym-22 { background-image: url('x25.png'); } .sym-23 { background-image: url('x100.png'); }
         .sym-mul.active { background-image: url('eye_sprite.png') !important; background-size: 2800% 100% !important; z-index: 999 !important; animation: scatterRunFinal 1.5s steps(27) infinite, wildPop 0.8s ease-in-out infinite alternate !important; }
 
-        @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px gold); } 100% { transform: scale(1); filter: brightness(1); } }
+        @keyframes winAction { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.15); filter: brightness(1.3) drop-shadow(0 0 10px rgb(0, 110, 255)); } 100% { transform: scale(1); filter: brightness(1); } }
         .anim-win { animation: winAction 1s ease-in-out infinite; z-index: 300 !important; transition: none !important; } 
         
         @keyframes explodeAction { 0% { transform: scale(1.1); opacity: 1; filter: brightness(2); } 100% { transform: scale(2); opacity: 0; filter: blur(4px) brightness(5); } }
@@ -160,10 +156,12 @@
         .paytable-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 20px; }
         .paytable-item { background: rgba(40, 10, 60, 0.6); border: 1px solid #9932cc; border-radius: 10px; padding: 5px; display: flex; align-items: center; justify-content: space-between; height: 14vh; box-shadow: inset 0 0 10px rgba(138, 43, 226, 0.2);}
         .paytable-item img { width: auto; height: 85%; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));}
-        .paytable-info { width: 56%; display: flex; flex-direction: column; justify-content: center; padding-right: 2px;}
-        .paytable-row { display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black', sans-serif; font-size: 3.6vh; }
+        /* ▼ 修正：防止 10-11 斷行，拉寬文字區塊，字體微調 ▼ */
+        .paytable-info { width: 62%; display: flex; flex-direction: column; justify-content: center; padding-right: 5px; }
+        .paytable-row { display: flex; justify-content: space-between; width: 100%; font-family: 'Arial Black', sans-serif; font-size: 2.1vh; margin-bottom: 3px; white-space: nowrap; }
         .paytable-mul { color: #fff; font-weight: bold; }
         .paytable-val { color: #ffd700; text-align: right; text-shadow: 1px 1px 0 #000; }
+        /* ▲ 修正結束 ▲ */
         
         .special-rule-block { grid-column: 1 / -1; background: linear-gradient(90deg, #2e004d 0%, #1a0b2e 100%); border: 2px solid #fff; border-radius: 12px; display: flex; align-items: center; padding: 8px 12px; margin-top: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); min-height: 14vh; }
         .special-fixed-height { height: 14vh; }
@@ -288,12 +286,14 @@
         <audio id="bgm_free" src="bgm_free.mp3" loop></audio>
         <audio id="sfx_spin_1" src="sfx_spin.mp3"></audio>
         <audio id="sfx_stop_1" src="sfx_stop.mp3"></audio>
-        <audio id="sfx_win_1" src="sfx_win.mp3"></audio>
+        
+        <audio id="sfx_clear_1" src="sfx_clear.mp3"></audio> 
+        
+        <audio id="sfx_win_1" src="sfx_win.mp3"></audio> 
         <audio id="sfx_win_free_1" src="sfx_win_free.mp3"></audio>
         <audio id="sfx_bigwin_1" src="sfx_bigwin.mp3"></audio>
         <audio id="sfx_scatter_1" src="sfx_scatter.mp3"></audio>
         <audio id="sfx_click_1" src="sfx_click.mp3"></audio>
-        <audio id="sfx_dragon_1" src="sfx_dragon.mp3"></audio>
         <audio id="sfx_youWin_1" src="you-win.mp3"></audio>
     </div>
 
@@ -302,7 +302,7 @@
         import { SlotEngine } from './engine.js';
         import { GUIController } from './gui.js';
 
-        let gui; // 宣告全域的 UI 控制器
+        let gui; 
 
         const View = {
             init: function() {
@@ -325,8 +325,7 @@
             
             createSymbol: function(type) {
                 let div = document.createElement('div');
-                if (type === 10) div.className = `symbol sym-wild`;
-                else if (type === 11) div.className = `symbol sym-scatter`;
+                if (type === 11) div.className = `symbol sym-scatter`;
                 else if (type >= 20) div.className = `symbol sym-mul sym-${type}`; 
                 else { div.className = `symbol sym-${type}`; if(GameConfig.assets.images.symbols[type]) div.style.backgroundImage = `url('${GameConfig.assets.images.symbols[type]}')`; }
                 return div;
@@ -335,43 +334,55 @@
             generatePaytable: function() {
                 const container = document.getElementById('paytable-container');
                 container.innerHTML = '';
+                
+                // 1. 一般符號賠率表 (替換為全盤消除的 12+ / 10-11 / 8-9 格式)
+                const mockPayouts = {
+                    1: { '12+': 50, '10-11': 25, '8-9': 10 },
+                    2: { '12+': 25, '10-11': 10, '8-9': 2.5 },
+                    3: { '12+': 15, '10-11': 5,  '8-9': 2 },
+                    4: { '12+': 12, '10-11': 3,  '8-9': 1.5 },
+                    5: { '12+': 10, '10-11': 2,  '8-9': 1 },
+                    6: { '12+': 8,  '10-11': 1.5,'8-9': 0.8 },
+                    7: { '12+': 5,  '10-11': 1.2,'8-9': 0.5 },
+                    8: { '12+': 4,  '10-11': 1,  '8-9': 0.4 },
+                    9: { '12+': 2,  '10-11': 0.8,'8-9': 0.25 }
+                };
+
                 for (let i = 1; i <= 9; i++) {
-                    let s = GameConfig.symbols[i];
+                    let p = mockPayouts[i];
                     let html = `<div class="paytable-item"><img src="s${i}.png"><div class="paytable-info">`; 
-                    if (s.payouts[5]) html += `<div class="paytable-row"><span class="paytable-mul">5x</span><span class="paytable-val">${s.payouts[5]}</span></div>`;
-                    if (s.payouts[4]) html += `<div class="paytable-row"><span class="paytable-mul">4x</span><span class="paytable-val">${s.payouts[4]}</span></div>`;
-                    if (s.payouts[3]) html += `<div class="paytable-row"><span class="paytable-mul">3x</span><span class="paytable-val">${s.payouts[3]}</span></div>`;
-                    html += `</div></div>`; container.innerHTML += html;
+                    html += `<div class="paytable-row"><span class="paytable-mul">12+</span><span class="paytable-val">${p['12+']}</span></div>`;
+                    html += `<div class="paytable-row"><span class="paytable-mul">10-11</span><span class="paytable-val">${p['10-11']}</span></div>`;
+                    html += `<div class="paytable-row"><span class="paytable-mul">8-9</span><span class="paytable-val">${p['8-9']}</span></div>`;
+                    html += `</div></div>`; 
+                    container.innerHTML += html;
                 }
 
-                let wildHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #ff4500; background: linear-gradient(90deg, #3d0a0a 0%, #1a0000 100%);">
-                    <div class="special-img"><img src="WILD.png"><div class="c-red" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">WILD</div></div>
-                    <div class="special-text"><div class="rule-title" style="color:#ff4500;">百搭符號 (WILD)</div><div style="font-size:1.4vh; color:#fff; line-height:1.5;">● 可替代 <span class="c-cyan">SCATTER</span> 與 <span class="c-yellow">龍眼</span> 以外的所有符號。<br>● 僅出現在第 2, 3, 4, 5 卷軸。</div></div></div>`;
-                container.innerHTML += wildHtml;
-
+                // 2. SCATTER 免費遊戲
                 let scatterHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);">
                     <div class="special-img"><img src="SCATTER.png"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">SCATTER</div></div>
                     <div class="special-text"><div class="rule-title" style="color:#00bfff;">免費遊戲 (Free Game)</div>
-                    <div class="desc-row"><span class="c-white">3 顆 寶箱</span> <span class="c-cyan">5 局</span></div>
-                    <div class="desc-row"><span class="c-white">4 顆 寶箱</span> <span class="c-cyan">10 局</span></div>
-                    <div class="desc-row"><span class="c-yellow">5 顆 寶箱</span> <span class="c-red">15 局 (極限大獎!)</span></div></div></div>`;
+                    <div class="desc-row"><span class="c-white">4 隻 聖甲蟲</span> <span class="c-cyan">15 局</span></div>
+                    <div class="desc-row"><span class="c-white">5 隻 聖甲蟲</span> <span class="c-cyan">15 局 + 額外獎勵</span></div>
+                    <div class="desc-row"><span class="c-yellow">6 隻 聖甲蟲</span> <span class="c-red">15 局 (極限大獎!)</span></div></div></div>`;
                 container.innerHTML += scatterHtml;
 
-                let dragonHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #ffd700; background: linear-gradient(90deg, #332200 0%, #1a1100 100%);">
-                    <div class="special-img"><img src="x100.png" style="filter: drop-shadow(0 0 5px gold);"><div class="c-yellow" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">龍眼倍數</div></div>
-                    <div class="special-text"><div class="rule-title" style="color:#ffd700;">龍眼倍數 (Multiplier)</div>
-                    <div class="desc-row"><span class="c-gray">5局 (3寶箱)</span> <span>常見 <span class="c-cyan">x2</span>, 有機會 <span class="c-cyan">x10</span></span></div>
-                    <div class="desc-row"><span class="c-gray">10局 (4寶箱)</span> <span>常見 <span class="c-cyan">x10</span>, 有機會 <span class="c-yellow">x25</span></span></div>
-                    <div class="desc-row"><span class="c-gray">15局 (5寶箱)</span> <span>解鎖 <span class="c-red" style="font-size:1.6vh; text-shadow:0 0 5px red;">x100</span> 頂級倍數!</span></div>
-                    <div style="font-size:1.1vh; color:#999; margin-top:3px; font-style:italic; text-align:right;">*倍數僅乘算當局贏分</div></div></div>`;
-                container.innerHTML += dragonHtml;
+                // 3. MULTIPLIER 專屬風暴水晶
+                let crystalHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #00ffff; background: linear-gradient(90deg, #001a33 0%, #000a1a 100%);">
+                    <div class="special-img"><img src="x100.png" style="filter: drop-shadow(0 0 5px cyan);"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">風暴水晶</div></div>
+                    <div class="special-text"><div class="rule-title" style="color:#00ffff;">風暴水晶 (Multiplier)</div>
+                    <div class="desc-row"><span class="c-gray">隨機掉落</span> <span>可獲得 <span class="c-cyan">x2</span> 到 <span class="c-red">x500</span> 倍</span></div>
+                    <div class="desc-row"><span class="c-gray">免費遊戲內</span> <span>參與爆分的倍數將被<span class="c-yellow">永久累積</span>!</span></div>
+                    <div style="font-size:1.1vh; color:#999; margin-top:3px; font-style:italic; text-align:right;">*累積倍數將乘算當局總贏分</div></div></div>`;
+                container.innerHTML += crystalHtml;
                 
+                // 4. 遊戲規則底部文字 (全盤消除 Pay Anywhere)
                 let rulesHtml = `<div class="special-rule-block" style="display:block; background:rgba(0,0,0,0.5); border:1px solid #aaa; margin-top:15px; padding:10px;">
                     <div class="info-title" style="font-size:2.2vh; margin-bottom:10px; color:#7cfc00;">★ 遊戲規則 ★</div>
                     <div style="font-size:1.4vh; line-height:1.6; color:#fff; text-align:left;">
-                        <div style="margin-bottom:8px; border-left: 4px solid #ffd700; padding-left:8px;"><strong>243 路 (Ways):</strong> 由左至右連續出現三個以上即中獎。<br><span style="color: #aaa; font-size: 1.4vh;">(若單一卷軸出現多個相同符號，路數將會相乘，贏分更多!)</span></div>
-                        <div style="margin-bottom:8px; border-left: 4px solid #ffd700; padding-left:8px;"><strong>特殊倍數:</strong> 龍眼倍數只會出現在免費遊戲內，將與當局所有贏分相乘。多個龍眼倍數會相加計算。</div>
-                        <div style="margin-bottom:8px; border-left: 4px solid #ffd700; padding-left:8px;"><strong>免費遊戲:</strong> 3個以上 SCATTER 觸發免費遊戲後，AKQJ等低分符號將會被移除，龍眼倍數會因免費局數不同產生倍數變化。</div>
+                        <div style="margin-bottom:8px; border-left: 4px solid #00ffff; padding-left:8px;"><strong>全盤消除 (Pay Anywhere):</strong> 畫面上任意位置出現 8 個以上相同符號即可中獎並觸發消除掉落。<br><span style="color: #aaa; font-size: 1.4vh;">(不須由左至右相鄰，數量越多贏分越高！)</span></div>
+                        <div style="margin-bottom:8px; border-left: 4px solid #00ffff; padding-left:8px;"><strong>特殊倍數:</strong> 風暴水晶會隨機掉落，並與當局所有贏分相乘。多顆風暴水晶倍數會相加計算。</div>
+                        <div style="margin-bottom:8px; border-left: 4px solid #00ffff; padding-left:8px;"><strong>免費遊戲:</strong> 4個以上 SCATTER 觸發15局免費遊戲，免費遊戲期間參與中獎的水晶倍數將被永久收集，並應用於後續的贏分！</div>
                     </div></div>`;
                 container.innerHTML += rulesHtml;
             },
@@ -393,7 +404,6 @@
             if (window.parent) window.parent.postMessage({ type: 'updateBalance', value: engine.state.credit }, '*');
         }
 
-        // 極簡化交叉淡出引擎
         function crossfadeBackground(fromVideoId, toVideoId) {
             const fromVideo = document.getElementById(fromVideoId);
             const toVideo = document.getElementById(toVideoId);
@@ -452,7 +462,6 @@
                         oldElements.forEach(el => {
                             let match = el.className.match(/sym-(\d+)/);
                             if (match) currentSyms.push(parseInt(match[1]));
-                            else if (el.classList.contains('sym-wild')) currentSyms.push(10);
                             else if (el.classList.contains('sym-scatter')) currentSyms.push(11);
                             else currentSyms.push(1);
                         });
@@ -514,27 +523,29 @@
                     document.getElementById('ui-multiplier').innerText = `x${currentMul}`;
                 }
 
+               // 1. 每次成功湊滿 8 顆符號，必定播放短促的「消除打擊聲」
+                window.AudioMgr.playSFX('clear');
+
+                // 2. 依據贏分大小，播放對應的「派彩/噴金幣聲」
                 if (engine.state.isFreeGame) window.AudioMgr.playSFX('win_free');
                 else if (winAmount > engine.state.bet * 10) window.AudioMgr.playSFX('bigwin');
-                else window.AudioMgr.playSFX('win');
+                else window.AudioMgr.playSFX('win'); // 專門配金幣噴發！
 
+                // 3. 噴發金幣視覺特效
                 if (winAmount >= engine.state.bet * 10) { window.CoinManager.fire(50, 0.5); } 
                 else if (winAmount > 0) { window.CoinManager.fire(15, 0.5); }
 
-                let hasWild = false;
                 matches.forEach(key => {
                     let [c, r] = key.split(','); let type = engine.state.gridData[c][r];
-                    if(type === 10) hasWild = true;
                     let el = View.getSymbolEl(c, r);
                     if(el) {
                         el.style.animation = 'none'; el.style.transform = 'none';
                         void el.offsetWidth; 
                         el.style.animation = ''; el.style.transform = '';
                         el.classList.add('anim-win');
-                        if (type === 10 || (type >= 1 && type <= 5) || (type >= 20 && type <= 23) || type === 11) el.classList.add('active');
+                        if ((type >= 1 && type <= 9) || (type >= 20 && type <= 23) || type === 11) el.classList.add('active');
                     }
                 });
-                if(hasWild) window.AudioMgr.playSFX('dragon');
 
                 await View.wait(1500); 
 
@@ -626,7 +637,6 @@
                 document.body.classList.add('free-mode');
                 document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${spins}`;
                 
-                // 觸發透明度無縫切換與音樂同步
                 crossfadeBackground('bg-main', 'bg-free');
                 window.AudioMgr.playBGM('free');
                 engine.startSpin(); 
@@ -664,7 +674,6 @@
                 document.body.classList.remove('free-mode');
                 document.getElementById('spin-icon').classList.remove('fast');
                 
-                // 觸發透明度無縫切回主畫面與音樂同步
                 window.AudioMgr.playBGM('main'); 
                 setTimeout(() => { crossfadeBackground('bg-free', 'bg-main'); }, 50);
                 
@@ -678,44 +687,40 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
+            const preloadSprites = ['SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
             preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
             
             View.init();
             gui = new GUIController(engine);
 
-            // ▼ 新增：iOS 萬用音效解鎖器 (Audio Unlocker) ▼
+            const audioMain = document.getElementById('bgm_main');
+            const audioFree = document.getElementById('bgm_free');
+            if(audioMain) audioMain.volume = 0.8; 
+            if(audioFree) audioFree.volume = 1.0; 
+
             let audioUnlocked = false;
             const unlockAudio = () => {
                 if (audioUnlocked) return;
                 audioUnlocked = true;
-                
-                // 抓取畫面上所有的 <audio> 標籤
                 document.querySelectorAll('audio').forEach(audio => {
                     if (audio.paused) {
-                        audio.muted = true; // 先靜音，避免嚇到玩家
+                        audio.muted = true; 
                         let playPromise = audio.play();
                         if (playPromise !== undefined) {
                             playPromise.then(() => {
-                                audio.pause();      // 偷播成功後立刻暫停
-                                audio.muted = false; // 解除靜音，準備之後真正播放
+                                audio.pause();      
+                                audio.muted = false; 
                                 audio.currentTime = 0;
-                            }).catch(e => {
-                                // 忽略報錯
-                            });
+                            }).catch(e => {});
                         }
                     }
                 });
-                
-                // 解鎖完成後，移除監聽器節省效能
                 document.body.removeEventListener('touchstart', unlockAudio);
                 document.body.removeEventListener('click', unlockAudio);
             };
 
-            // 綁定到玩家的第一次觸控或點擊
             document.body.addEventListener('touchstart', unlockAudio, { once: true });
             document.body.addEventListener('click', unlockAudio, { once: true });
-            // ▲ 新增結束 ▲
         });
     </script>
 </body>
