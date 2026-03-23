@@ -680,8 +680,42 @@
         window.addEventListener('DOMContentLoaded', () => {
             const preloadSprites = ['dragon_sprite.png', 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
             preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
+            
             View.init();
             gui = new GUIController(engine);
+
+            // ▼ 新增：iOS 萬用音效解鎖器 (Audio Unlocker) ▼
+            let audioUnlocked = false;
+            const unlockAudio = () => {
+                if (audioUnlocked) return;
+                audioUnlocked = true;
+                
+                // 抓取畫面上所有的 <audio> 標籤
+                document.querySelectorAll('audio').forEach(audio => {
+                    if (audio.paused) {
+                        audio.muted = true; // 先靜音，避免嚇到玩家
+                        let playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            playPromise.then(() => {
+                                audio.pause();      // 偷播成功後立刻暫停
+                                audio.muted = false; // 解除靜音，準備之後真正播放
+                                audio.currentTime = 0;
+                            }).catch(e => {
+                                // 忽略報錯
+                            });
+                        }
+                    }
+                });
+                
+                // 解鎖完成後，移除監聽器節省效能
+                document.body.removeEventListener('touchstart', unlockAudio);
+                document.body.removeEventListener('click', unlockAudio);
+            };
+
+            // 綁定到玩家的第一次觸控或點擊
+            document.body.addEventListener('touchstart', unlockAudio, { once: true });
+            document.body.addEventListener('click', unlockAudio, { once: true });
+            // ▲ 新增結束 ▲
         });
     </script>
 </body>
