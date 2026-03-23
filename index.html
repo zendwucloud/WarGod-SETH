@@ -687,40 +687,15 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
+            // 1. 預載素材
             const preloadSprites = ['SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png'];
             preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
             
+            // 2. 初始化畫面
             View.init();
+
+            // 3. 將引擎交給 GUIController (由它統一管理按鈕與音效)
             gui = new GUIController(engine);
-
-            const audioMain = document.getElementById('bgm_main');
-            const audioFree = document.getElementById('bgm_free');
-            if(audioMain) audioMain.volume = 0.8; 
-            if(audioFree) audioFree.volume = 1.0; 
-
-            let audioUnlocked = false;
-            const unlockAudio = () => {
-                if (audioUnlocked) return;
-                audioUnlocked = true;
-                document.querySelectorAll('audio').forEach(audio => {
-                    if (audio.paused) {
-                        audio.muted = true; 
-                        let playPromise = audio.play();
-                        if (playPromise !== undefined) {
-                            playPromise.then(() => {
-                                audio.pause();      
-                                audio.muted = false; 
-                                audio.currentTime = 0;
-                            }).catch(e => {});
-                        }
-                    }
-                });
-                document.body.removeEventListener('touchstart', unlockAudio);
-                document.body.removeEventListener('click', unlockAudio);
-            };
-
-            document.body.addEventListener('touchstart', unlockAudio, { once: true });
-            document.body.addEventListener('click', unlockAudio, { once: true });
         });
     </script>
 </body>

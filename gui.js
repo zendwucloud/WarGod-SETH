@@ -17,19 +17,33 @@ export class GUIController {
             musicEnabled: true, sfxEnabled: true,
             updateSettings: function(musicOn, sfxOn) {
                 this.musicEnabled = musicOn; this.sfxEnabled = sfxOn;
-                if (!this.musicEnabled) { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } 
-                else { this.playBGM(document.body.classList.contains('free-mode') ? 'free' : 'main'); }
+                if (!this.musicEnabled) { 
+                    try { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } catch(e){} 
+                } 
+                else { 
+                    // 🌟 防護罩：確保玩家已經點擊過開始按鈕 (畫面已載入) 才接受大廳的播放指令
+                    const stage = document.getElementById('game-stage');
+                    if (stage && stage.classList.contains('loaded')) {
+                        this.playBGM(document.body.classList.contains('free-mode') ? 'free' : 'main'); 
+                    }
+                }
             },
             playBGM: function(type) {
                 if (!this.musicEnabled) return;
-                document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause();
+                try { document.getElementById('bgm_main').pause(); document.getElementById('bgm_free').pause(); } catch(e){}
                 let target = document.getElementById((type === 'free') ? 'bgm_free' : 'bgm_main');
-                if(target) { target.currentTime = 0; target.volume = (type === 'free') ? 1.0 : 0.8; target.play().catch(()=>{}); }
+                if(target) { 
+                    target.volume = (type === 'free') ? 1.0 : 0.8; 
+                    target.play().catch(()=>{}); 
+                }
             },
             playSFX: function(name) {
                 if (!this.sfxEnabled) return;
                 let audio = document.getElementById(`sfx_${name}_1`);
-                if (audio) { audio.currentTime = 0; audio.play().catch(()=>{}); }
+                if (audio) { 
+                    try { audio.currentTime = 0; } catch(e){} 
+                    audio.play().catch(()=>{}); 
+                }
             }
         };
     }
@@ -142,10 +156,14 @@ export class GUIController {
             btnStart.addEventListener('click', () => {
                 document.getElementById('loading-layer').style.display = 'none';
                 document.getElementById('game-stage').classList.add('loaded');
-                window.AudioMgr.playBGM('main');
-                window.CoinManager.init();
+                
+                try {
+                    window.AudioMgr.playBGM('main');
+                } catch(e) { console.warn("Audio start bypassed"); }
+
+                if (window.CoinManager) window.CoinManager.init();
                 this.startPromoLoop();
-            });
+            }, { once: true }); // 🌟 關鍵：確保只觸發一次，防止 iOS 音效權杖混亂
         }
 
         // Spin 按鈕
