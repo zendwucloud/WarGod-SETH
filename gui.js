@@ -158,12 +158,29 @@ export class GUIController {
                 document.getElementById('game-stage').classList.add('loaded');
                 
                 try {
+                    // 1. 正式啟動主遊戲音樂 (MG)
                     window.AudioMgr.playBGM('main');
-                } catch(e) { console.warn("Audio start bypassed"); }
+                    
+                    // 2. 🤫 偷渡解鎖免費遊戲音樂 (FG) - 音量0播放後立刻暫停，騙過蘋果憑證
+                    let freeBgm = document.getElementById('bgm_free');
+                    if (freeBgm) {
+                        freeBgm.volume = 0;
+                        let p = freeBgm.play();
+                        if (p !== undefined) {
+                            p.then(() => {
+                                freeBgm.pause();
+                                freeBgm.currentTime = 0;
+                                freeBgm.volume = 1.0; // 恢復正常音量備用
+                            }).catch(() => {
+                                freeBgm.volume = 1.0; 
+                            });
+                        }
+                    }
+                } catch(e) { console.warn("Audio start bypassed", e); }
 
                 if (window.CoinManager) window.CoinManager.init();
                 this.startPromoLoop();
-            }, { once: true }); // 🌟 關鍵：確保只觸發一次，防止 iOS 音效權杖混亂
+            }, { once: true }); // 🌟 確保只觸發一次
         }
 
         // Spin 按鈕
