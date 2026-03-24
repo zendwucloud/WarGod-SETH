@@ -9,13 +9,29 @@
         html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
         body { background-image: url('background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; display: flex; justify-content: center; align-items: center; font-family: 'Arial', sans-serif; user-select: none; -webkit-user-select: none; }
         
-        .stage { position: relative; width: calc(100vh * 9 / 16); height: 100vh; max-width: 100vw; aspect-ratio: 720/1280; background-color: transparent; opacity: 0; transition: opacity 0.5s ease-in; }
+        .stage { 
+            position: relative; 
+            height: 100vh; 
+            width: calc(100vh * 9 / 16); 
+            max-width: 100vw; 
+            max-height: calc(100vw * 16 / 9); /* 🌟 核心防護：寬度被壓時，強制壓低高度維持 9:16 */
+            background-color: transparent; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in; 
+        }
         .stage.loaded { opacity: 1; }
 
         /* --- 2. 載入過場 --- */
         #loading-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out; }
         #loading-layer.hidden { opacity: 0; pointer-events: none; }
-        .loading-container { position: relative; width: calc(100vh * 9 / 16); height: 100vh; max-width: 100vw; aspect-ratio: 720/1280; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+        .loading-container { 
+            position: relative; 
+            height: 100vh; 
+            width: calc(100vh * 9 / 16); 
+            max-width: 100vw; 
+            max-height: calc(100vw * 16 / 9); /* 🌟 同步鎖定載入畫面比例 */
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center; 
+        }
         .loading-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
         .loading-bottom-ui { position: relative; z-index: 10; width: 70%; margin-bottom : 12%; display: flex; flex-direction: column; align-items: center; text-align: center; }
         #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: block; animation: pulseBtn 1.5s infinite; }
@@ -43,7 +59,7 @@
         .free-mode .buy-button { display: none; }
 
         /* --- 4. 捲軸與長條滾動系統 --- */
-        .reel-viewport { position: absolute; top: calc(21.2% + 20px); left: 0; width: 100%; height: 45.0%; overflow: hidden; z-index: 10; }
+        .reel-viewport { position: absolute; top: 22.76%; left: 0; width: 100%; height: 45.0%; overflow: hidden; z-index: 10; }
         .grid-container { width: 93.5%; height: 100%; margin: 0 auto; display: flex; justify-content: space-between; }
         .column { position: relative; width: 16.5%; height: 100%; display: block; z-index: 1; }
         
@@ -100,7 +116,7 @@
         #ui-multiplier, #ui-free-spins { display: none; font-size: 2.5vh; color: #00FFFF; text-shadow: 0 0 10px #0000FF; bottom: 18%; position: absolute; z-index: 500;}
         #ui-multiplier { right: 5%; } #ui-free-spins { left: 5%; }
        
-        #ui-message-bar { position: absolute; bottom: calc(26.7% - 20px); left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
+        #ui-message-bar { position: absolute; bottom: 25.14%; left: 50%; transform: translateX(-50%); width: 92%; height: 6vh; display: none; align-items: center; justify-content: center; z-index: 600; overflow: hidden; }
         #msg-content { display: inline-block; white-space: nowrap; transition: transform 0.3s ease-out; padding: 0 10px; }
         .style-win { font-family: 'Arial Black', sans-serif; font-size: 3.5vh; color: #FFFF00; text-shadow: 2px 2px 0px #FF4500, 0 0 10px #FF8C00; letter-spacing: 1px; }
         .style-promo { font-family: 'Arial', sans-serif !important; font-weight: bold !important; font-size: 2.8vh !important; color: #7492d9 !important; text-shadow: 2px 2px 0px #000 !important; }
