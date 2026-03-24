@@ -502,7 +502,11 @@
                         targetSyms.forEach((type, r) => {
                             let el = View.createSymbol(type);
                             el.setAttribute('data-row', r);
-                            if(!gui.isTurboMode) el.style.animation = 'landBounce 0.3s ease-out';
+                            if(!gui.isTurboMode) {
+                                el.style.animation = 'landBounce 0.3s ease-out';
+                                // 🌟 核心修復一：回彈動畫結束後，強制拔除 animation，防止殘留偏移
+                                setTimeout(() => { if (el) el.style.animation = 'none'; }, 350);
+                            }
                             colDiv.appendChild(el);
                         });
                         resolve();
@@ -591,8 +595,20 @@
                         el.style.transform = `translateY(0)`;
                     }
                 }
+                
                 await View.wait(400); 
                 window.AudioMgr.playSFX('stop');
+                
+                // 🌟 核心修復二：所有符號掉落完畢後，強制拔除 inline transform，回歸最完美的絕對定位
+                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
+                    let colDiv = document.getElementById(`col-${c}`);
+                    if (colDiv) {
+                        colDiv.querySelectorAll('.symbol').forEach(el => {
+                            el.style.transform = 'none';
+                        });
+                    }
+                }
+
                 await View.wait(300); 
             },
 
@@ -655,7 +671,7 @@
                     fountain = setInterval(() => { window.CoinManager.fire(40, 0.5); }, 200);
                     for(let i=0; i<50; i++) { setTimeout(window.spawnConfetti, i * 40); }
                 } 
-                else if (totalWin >= engine.state.bet * 5) {
+                else if (totalWin >= engine.state.bet * 5) { 
                     window.AudioMgr.playSFX('bigwin');
                     window.CoinManager.fire(100, 0.5);
                     setTimeout(() => window.CoinManager.fire(80, 0.5), 600);
