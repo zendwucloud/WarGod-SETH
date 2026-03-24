@@ -504,8 +504,15 @@
                             el.setAttribute('data-row', r);
                             if(!gui.isTurboMode) {
                                 el.style.animation = 'landBounce 0.3s ease-out';
-                                // 🌟 核心修復一：回彈動畫結束後，強制拔除 animation，防止殘留偏移
-                                setTimeout(() => { if (el) el.style.animation = 'none'; }, 350);
+                                // 🌟 終極修正：清空動畫，並用 translate3d 強制鎖死在 0 的位置
+                                setTimeout(() => { 
+                                    if (el) {
+                                        el.style.animation = ''; 
+                                        el.style.transform = 'translate3d(0px, 0px, 0px)';
+                                    }
+                                }, 350);
+                            } else {
+                                el.style.transform = 'translate3d(0px, 0px, 0px)';
                             }
                             colDiv.appendChild(el);
                         });
@@ -599,12 +606,13 @@
                 await View.wait(400); 
                 window.AudioMgr.playSFX('stop');
                 
-                // 🌟 核心修復二：所有符號掉落完畢後，強制拔除 inline transform，回歸最完美的絕對定位
+                // 🌟 終極修正：掉落完畢後，關閉 transition 並強制 GPU 像素對齊
                 for(let c = 0; c < GameConfig.mechanics.cols; c++) {
                     let colDiv = document.getElementById(`col-${c}`);
                     if (colDiv) {
                         colDiv.querySelectorAll('.symbol').forEach(el => {
-                            el.style.transform = 'none';
+                            el.style.transition = 'none'; // 拔掉滑動效果
+                            el.style.transform = 'translate3d(0px, 0px, 0px)'; // 鎖死 GPU
                         });
                     }
                 }
