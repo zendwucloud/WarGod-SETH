@@ -113,7 +113,8 @@ export class GUIController {
     }
 
     showPromoMessage() {
-        this.updateMessage("★ 3個 SCATTER 觸發 5次 免費遊戲 ★", "style-promo", "anim-scroll");
+        // 🌟 把這裡的 3個改 4個，5次改 15次
+        this.updateMessage("★ 4個 SCATTER 觸發 15次 免費遊戲 ★", "style-promo", "anim-scroll");
         setTimeout(() => { 
             if(!this.engine.state.isSpinning && this.engine.state.currentWin === 0) 
                 document.getElementById('ui-message-bar').style.display = 'none'; 
