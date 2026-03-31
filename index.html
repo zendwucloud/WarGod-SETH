@@ -822,6 +822,8 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
+            // 🌟 補上這一行，重整時才會主動喊話！
+            if (window.parent) { window.parent.postMessage({ type: 'requestInitData' }, '*'); }
             // 1. 預載素材 (🌟 已補上 s1 ~ s5 的 Sprite 圖片)
             const preloadSprites = [
                 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png', 
