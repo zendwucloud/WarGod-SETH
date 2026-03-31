@@ -36,7 +36,48 @@
         .loading-bottom-ui { position: relative; z-index: 10; width: 70%; margin-bottom : 12%; display: flex; flex-direction: column; align-items: center; text-align: center; }
         #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: block; animation: pulseBtn 1.5s infinite; }
         @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
-     
+
+        /* --- 載入畫面特色介紹 (1.5秒白字黑邊淡入版) --- */
+        #loading-promo-text {
+            position: relative;
+            z-index: 10;
+            width: 85%;
+            margin-bottom: 3vh; /* 與下方按鈕保持距離 */
+            text-align: center; /* 讓整個文字區塊置中 */
+            opacity: 0; 
+            animation: fadeInPromo 1.5s ease-in forwards; /* 🌟 完美的 1.5 秒淡入 */
+        }
+        .promo-title {
+            color: #ffffff;
+            font-size: 2.2vh;
+            font-family: 'Arial Black', sans-serif;
+            margin-bottom: 1.5vh;
+            /* 🌟 核心：乾淨的 1px 黑色描邊 + 些微陰影增加立體感 */
+            -webkit-text-stroke: 1px #000;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 1px;
+        }
+        .promo-item {
+            color: #ffffff;
+            font-size: 1.6vh;
+            font-weight: bold;
+            margin-bottom: 1.2vh;
+            line-height: 1.5;
+            text-align: left;
+            display: inline-block; /* 讓文字靠左，但整體區塊置中 */
+            /* 🌟 核心：內文用稍微細一點的 0.8px 黑色描邊 */
+            -webkit-text-stroke: 0.8px #000;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        }
+        /* 取消特別的亮色，全部統一為白色 */
+        .promo-item span {
+            color: #ffffff; 
+        }
+        @keyframes fadeInPromo { 
+            0% { opacity: 0; transform: translateY(10px); } /* 微微往上浮現會更有質感，不喜歡可以刪掉 transform */
+            100% { opacity: 1; transform: translateY(0); } 
+        }
+ 
         /* --- 3. 遊戲內部與特效 --- */
         .game-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; filter: brightness(1.0); }
         .free-mode .game-bg { filter: brightness(1.0); }
@@ -229,6 +270,9 @@
     <div id="loading-layer">
         <div class="loading-container">
             <img src="loading.jpg" class="loading-visual" onerror="this.style.display='none'">
+            
+            <div id="loading-promo-text"></div>
+
             <div class="loading-bottom-ui"><div id="btn-start-game" style="display:block;">★ 點擊開始遊戲 ★</div></div>
         </div>
     </div>
@@ -416,15 +460,6 @@
             wait: function(ms) { return new Promise(resolve => setTimeout(resolve, ms)); },
             getSymbolEl: function(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
         };
-
-        window.addEventListener('message', (event) => {
-            const data = event.data;
-            if (data.type === 'initBalance') {
-                engine.state.credit = data.value;
-                document.getElementById('ui-credit').innerText = engine.state.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
-            } 
-            else if (data.type === 'updateSettings') { window.AudioMgr.updateSettings(data.music, data.sfx); }
-        });
 
         function syncBalanceToLobby() {
             if (window.parent) window.parent.postMessage({ type: 'updateBalance', value: engine.state.credit }, '*');
@@ -735,12 +770,48 @@
                 if(gui.isAutoPlay || engine.state.isFreeGame) { setTimeout(() => engine.startSpin(), 800); }
             }
         });
+        // 🌟 方案 A：接收大廳傳來的說明文案與初始設定 (貼在這裡！)
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            if (data.type === 'initBalance') {
+                engine.state.credit = data.value;
+                document.getElementById('ui-credit').innerText = engine.state.credit.toLocaleString('en-US', {minimumFractionDigits: 2});
+            } 
+            else if (data.type === 'updateSettings') { 
+                window.AudioMgr.updateSettings(data.music, data.sfx); 
+            }
+            // 接收大廳傳來的說明文案 (包含修復動畫時間差)
+            else if (data.type === 'initPromoText') {
+                const promoContainer = document.getElementById('loading-promo-text');
+                if (data.text && promoContainer) {
+                    let lines = data.text.split(/\r?\n/);
+                    let html = '';
+                    
+                    if (lines.length > 0 && lines[0].trim() !== '') {
+                        html += `<div class="promo-title">${lines[0]}</div>`;
+                    }
+                    for (let i = 1; i < lines.length; i++) {
+                        if (lines[i].trim() !== '') {
+                            html += `<div class="promo-item">${lines[i]}</div>`;
+                        }
+                    }
+                    
+                    promoContainer.innerHTML = html;
+                    
+                    // 強制重置動畫，確保必定觸發淡入
+                    promoContainer.style.animation = 'none';
+                    promoContainer.offsetHeight; // 觸發重繪
+                    promoContainer.style.animation = 'fadeInPromo 1.5s ease-in forwards';
+                    promoContainer.style.opacity = 1; 
+                }
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. 預載素材 (🌟 已修正為 .png)
+            // 1. 預載素材 (🌟 已補上 s1 ~ s5 的 Sprite 圖片)
             const preloadSprites = [
                 'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png', 
-                's1_sprite.png', 's2_sprite.png', 's3_sprite.png', 's4_sprite.png', 's5_sprite.png'
+                's1_sprite.jpg', 's2_sprite.jpg', 's3_sprite.jpg', 's4_sprite.jpg', 's5_sprite.jpg'
             ];
             preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
             
