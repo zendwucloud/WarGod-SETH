@@ -769,7 +769,7 @@
                 if(gui.isAutoPlay || engine.state.isFreeGame) { setTimeout(() => engine.startSpin(), 800); }
             }
         });
-        // 🌟 方案 A：接收大廳傳來的說明文案與初始設定 (貼在這裡！)
+        // 🌟 方案 A：接收大廳傳來的說明文案與初始設定
         window.addEventListener('message', (event) => {
             const data = event.data;
             if (data.type === 'initBalance') {
@@ -779,7 +779,7 @@
             else if (data.type === 'updateSettings') { 
                 window.AudioMgr.updateSettings(data.music, data.sfx); 
             }
-            // 接收大廳傳來的說明文案 (包含修復動畫時間差)
+            // 接收大廳傳來的說明文案 (終極防快取卡死版)
             else if (data.type === 'initPromoText') {
                 const promoContainer = document.getElementById('loading-promo-text');
                 if (data.text && promoContainer) {
@@ -797,11 +797,15 @@
                     
                     promoContainer.innerHTML = html;
                     
-                    // 強制重置動畫，確保必定觸發淡入
+                    // 🌟 終極防護：拔掉原本的 inline style，完全交給動畫引擎
+                    promoContainer.style.opacity = ''; 
                     promoContainer.style.animation = 'none';
-                    promoContainer.offsetHeight; // 觸發重繪
+                    
+                    // 強制重繪 (Reflow)
+                    void promoContainer.offsetWidth; 
+                    
+                    // 重新掛上動畫，並確保結尾保持可見
                     promoContainer.style.animation = 'fadeInPromo 1.5s ease-in forwards';
-                    promoContainer.style.opacity = 1; 
                 }
             }
         });
