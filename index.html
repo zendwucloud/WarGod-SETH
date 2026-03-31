@@ -37,7 +37,7 @@
         #btn-start-game { margin-top: 3vh; padding: 1.5vh 6vh; font-family: 'Arial Black', sans-serif; font-size: 2.8vh; color: #fff; background: linear-gradient(180deg, #ff4500, #8b0000); border: 2px solid #ffd700; border-radius: 50px; box-shadow: 0 0 20px rgba(255, 69, 0, 0.8), inset 0 0 10px rgba(255, 255, 0, 0.3); cursor: pointer; display: block; animation: pulseBtn 1.5s infinite; }
         @keyframes pulseBtn { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.05); filter: brightness(1.2); } 100% { transform: scale(1); filter: brightness(1); } }
 
-        /* --- 載入畫面特色介紹 (粗體加厚黑邊版) --- */
+        /* --- 載入畫面特色介紹 (八方陰影純淨白字版) --- */
         #loading-promo-text {
             position: relative;
             z-index: 10;
@@ -49,28 +49,29 @@
         }
         .promo-title {
             color: #ffffff;
-            font-size: 2.3vh; /* 微調放大增加張力 */
+            font-size: 2.3vh; 
             font-family: 'Arial Black', sans-serif;
             margin-bottom: 1.5vh;
-            /* 🌟 極致加厚：2px 黑邊 + 雙重極黑陰影 */
-            -webkit-text-stroke: 2px #000;
-            text-shadow: 3px 3px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8);
+            /* 🌟 拔掉 text-stroke，改用八方陰影包圍，保證白字不被吃掉 */
+            text-shadow: 
+                2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 
+                0 2px 0 #000, 2px 0 0 #000, 0 -2px 0 #000, -2px 0 0 #000,
+                3px 3px 5px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8);
             letter-spacing: 1px;
         }
         .promo-item {
             color: #ffffff;
-            font-size: 1.7vh; /* 配合粗體微調放大 */
-            font-weight: 900; /* 🌟 強制最粗體 */
+            font-size: 1.7vh; 
+            font-weight: 900; 
             margin-bottom: 1.2vh;
             line-height: 1.5;
             text-align: left;
             display: inline-block; 
-            /* 🌟 極致加厚：1.5px 黑邊 + 雙重極黑陰影 */
-            -webkit-text-stroke: 1.5px #000;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
-        }
-        .promo-item span {
-            color: #ffffff; 
+            /* 🌟 同理，內文用 1.5px 的八方陰影包圍 */
+            text-shadow: 
+                1.5px 1.5px 0 #000, -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 
+                0 1.5px 0 #000, 1.5px 0 0 #000, 0 -1.5px 0 #000, -1.5px 0 0 #000,
+                2px 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8);
         }
         @keyframes fadeInPromo { 
             0% { opacity: 0; transform: translateY(10px); } 
