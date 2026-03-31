@@ -834,26 +834,30 @@
 
             // 3. 將引擎交給 GUIController (由它統一管理按鈕與音效)
             gui = new GUIController(engine);
-        });
-        // 🌟 4. 終極音效互斥鎖：確保 MG 與 FG 音樂絕對不會重疊播放！
-            const bgmMain = document.getElementById('bgm_main');
-            const bgmFree = document.getElementById('bgm_free');
-            if (bgmMain && bgmFree) {
-                // 當一般遊戲音樂開始播時，強制關閉免費遊戲音樂
-                bgmMain.addEventListener('play', () => {
-                    if (!bgmFree.paused) { 
-                        bgmFree.pause(); 
-                        bgmFree.currentTime = 0; 
+
+            // 🌟 4. 終極音效互斥鎖 (安全攔截版)：確保 MG 與 FG 音樂絕對不會重疊，且不影響原系統！
+            if (window.AudioMgr && window.AudioMgr.playBGM) {
+                const originalPlayBGM = window.AudioMgr.playBGM;
+                window.AudioMgr.playBGM = function(trackName) {
+                    const bgmMain = document.getElementById('bgm_main');
+                    const bgmFree = document.getElementById('bgm_free');
+                    
+                    // 播放 MG (一般遊戲) 音樂之前，強制關閉 FG 音樂
+                    if (trackName === 'main' && bgmFree) {
+                        bgmFree.pause();
+                        bgmFree.currentTime = 0;
+                    } 
+                    // 播放 FG (免費遊戲) 音樂之前，強制關閉 MG 音樂
+                    else if (trackName === 'free' && bgmMain) {
+                        bgmMain.pause();
+                        bgmMain.currentTime = 0;
                     }
-                });
-                // 當免費遊戲音樂開始播時，強制關閉一般遊戲音樂
-                bgmFree.addEventListener('play', () => {
-                    if (!bgmMain.paused) { 
-                        bgmMain.pause(); 
-                        bgmMain.currentTime = 0; 
-                    }
-                });
+                    
+                    // 處理完畢後，繼續執行原本的播放指令
+                    originalPlayBGM.call(window.AudioMgr, trackName);
+                };
             }
+        });
     </script>
 </body>
 </html>
