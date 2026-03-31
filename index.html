@@ -791,8 +791,15 @@
                         html += `<div class="promo-title">${lines[0]}</div>`;
                     }
                     for (let i = 1; i < lines.length; i++) {
-                        if (lines[i].trim() !== '') {
-                            html += `<div class="promo-item">${lines[i]}</div>`;
+                        let line = lines[i].trim();
+                        if (line !== '') {
+                            // 自動偵測分隔線，把前半段標成青色 (支援半形 | 或全形 ｜)
+                            let parts = line.split(/\||｜/); 
+                            if (parts.length > 1) {
+                                html += `<div class="promo-item"><span style="color:#00ffff;">${parts[0]}</span>｜${parts[1]}</div>`;
+                            } else {
+                                html += `<div class="promo-item">${line}</div>`;
+                            }
                         }
                     }
                     
