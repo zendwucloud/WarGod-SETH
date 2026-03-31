@@ -6,15 +6,17 @@
     <title>War God SETH</title>
     <style>
         /* --- 1. 基礎設定 --- */
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
+        /* 🌟 加入 100dvh 終極殺手鐧，強迫 Safari 扣除導覽列 */
+        html, body { margin: 0; padding: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background-color: #000; touch-action: none; position: fixed; }
         body { background-image: url('background.jpg'); background-size: cover; background-position: center; background-repeat: no-repeat; display: flex; justify-content: center; align-items: center; font-family: 'Arial', sans-serif; user-select: none; -webkit-user-select: none; }
         
         .stage { 
             position: relative; 
             height: 100vh; 
-            width: calc(100vh * 9 / 16); 
+            height: 100dvh; /* 🌟 遊戲舞台跟隨動態高度 */
+            aspect-ratio: 9/16; 
             max-width: 100vw; 
-            max-height: calc(100vw * 16 / 9); /* 🌟 核心防護：寬度被壓時，強制壓低高度維持 9:16 */
+            max-height: calc(100vw * 16 / 9); 
             background-color: transparent; 
             opacity: 0; 
             transition: opacity 0.5s ease-in; 
@@ -22,14 +24,15 @@
         .stage.loaded { opacity: 1; }
 
         /* --- 2. 載入過場 --- */
-        #loading-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: transparent; z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out; }
+        #loading-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; height: 100dvh; background-color: transparent; z-index: 9999; display: flex; justify-content: center; align-items: center; transition: opacity 0.5s ease-out; }
         #loading-layer.hidden { opacity: 0; pointer-events: none; }
         .loading-container { 
             position: relative; 
             height: 100vh; 
-            width: calc(100vh * 9 / 16); 
+            height: 100dvh; /* 🌟 載入畫面跟隨動態高度 */
+            aspect-ratio: 9/16;
             max-width: 100vw; 
-            max-height: calc(100vw * 16 / 9); /* 🌟 同步鎖定載入畫面比例 */
+            max-height: calc(100vw * 16 / 9); 
             display: flex; flex-direction: column; justify-content: flex-end; align-items: center; 
         }
         .loading-visual { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
