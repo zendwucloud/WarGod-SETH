@@ -835,6 +835,25 @@
             // 3. 將引擎交給 GUIController (由它統一管理按鈕與音效)
             gui = new GUIController(engine);
         });
+        // 🌟 4. 終極音效互斥鎖：確保 MG 與 FG 音樂絕對不會重疊播放！
+            const bgmMain = document.getElementById('bgm_main');
+            const bgmFree = document.getElementById('bgm_free');
+            if (bgmMain && bgmFree) {
+                // 當一般遊戲音樂開始播時，強制關閉免費遊戲音樂
+                bgmMain.addEventListener('play', () => {
+                    if (!bgmFree.paused) { 
+                        bgmFree.pause(); 
+                        bgmFree.currentTime = 0; 
+                    }
+                });
+                // 當免費遊戲音樂開始播時，強制關閉一般遊戲音樂
+                bgmFree.addEventListener('play', () => {
+                    if (!bgmMain.paused) { 
+                        bgmMain.pause(); 
+                        bgmMain.currentTime = 0; 
+                    }
+                });
+            }
     </script>
 </body>
 </html>
