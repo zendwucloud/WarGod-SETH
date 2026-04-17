@@ -159,26 +159,25 @@ export class GUIController {
                 document.getElementById('game-stage').classList.add('loaded');
                 
                 try {
-                    // ★ iOS 終極解鎖大法：全面改用 muted (靜音)
+                    // ★ iOS 終極解鎖大法 (防爆音修正版)
                     const audios = document.querySelectorAll('audio');
                     audios.forEach(a => {
-                        a.muted = true; // 強制靜音
+                        a.muted = true; // 1. 全部強制靜音
                         let p = a.play();
                         if (p !== undefined) {
                             p.then(() => {
                                 a.pause();
                                 a.currentTime = 0;
-                                a.muted = false; // 解鎖成功後，恢復發聲能力
-                            }).catch(() => {
-                                a.muted = false;
-                            });
+                                // 注意：這裡先「不」解除靜音，避免殘留聲音漏出
+                            }).catch(() => {});
                         }
                     });
 
-                    // ★ 延遲 100 毫秒再正式播放主音樂，避免非同步撞車
+                    // ★ 核心修復：給瀏覽器 300 毫秒的時間清空音訊緩衝區，再統一解除靜音
                     setTimeout(() => {
-                        window.AudioMgr.playBGM('main');
-                    }, 100);
+                        audios.forEach(a => { a.muted = false; }); // 統一恢復發聲能力
+                        window.AudioMgr.playBGM('main'); // 解除靜音後，正式開始播放背景音樂
+                    }, 300);
 
                 } catch(e) { console.warn("Audio start bypassed", e); }
 
