@@ -159,24 +159,27 @@ export class GUIController {
                 document.getElementById('game-stage').classList.add('loaded');
                 
                 try {
-                    // 1. 正式啟動主遊戲音樂 (MG)
-                    window.AudioMgr.playBGM('main');
-                    
-                    // 2. 🤫 偷渡解鎖免費遊戲音樂 (FG) - 音量0播放後立刻暫停，騙過蘋果憑證
-                    let freeBgm = document.getElementById('bgm_free');
-                    if (freeBgm) {
-                        freeBgm.volume = 0;
-                        let p = freeBgm.play();
+                    // ★ iOS 終極解鎖大法：全面改用 muted (靜音)
+                    const audios = document.querySelectorAll('audio');
+                    audios.forEach(a => {
+                        a.muted = true; // 強制靜音
+                        let p = a.play();
                         if (p !== undefined) {
                             p.then(() => {
-                                freeBgm.pause();
-                                freeBgm.currentTime = 0;
-                                freeBgm.volume = 1.0; // 恢復正常音量備用
+                                a.pause();
+                                a.currentTime = 0;
+                                a.muted = false; // 解鎖成功後，恢復發聲能力
                             }).catch(() => {
-                                freeBgm.volume = 1.0; 
+                                a.muted = false;
                             });
                         }
-                    }
+                    });
+
+                    // ★ 延遲 100 毫秒再正式播放主音樂，避免非同步撞車
+                    setTimeout(() => {
+                        window.AudioMgr.playBGM('main');
+                    }, 100);
+
                 } catch(e) { console.warn("Audio start bypassed", e); }
 
                 if (window.CoinManager) window.CoinManager.init();
