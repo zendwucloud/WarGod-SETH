@@ -274,6 +274,12 @@
             height: calc(100% + 2px) !important;
         }
     </style>
+    <style>
+        /* === PixiJS 版：轉輪區與特效畫布（其餘版面與 DOM 版完全相同） === */
+        #pixi-reels { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+        #pixi-fx { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2600; pointer-events: none; }
+        #pixi-reels canvas, #pixi-fx canvas { display: block; }
+    </style>
 </head>
 <body>
 
@@ -294,12 +300,13 @@
         <div class="ui-layer"></div>
         <div class="fire-effect"></div>
         <div id="fg-mask"></div>
-        <canvas id="coin-canvas"></canvas>
+        <canvas id="coin-canvas" style="display:none"></canvas>
+        <div id="pixi-fx"></div>
         
         <img id="btn-phone" src="phone.png" class="phone-button">
         <img id="btn-buy" src="buy_btn.png" class="buy-button">
         
-        <div class="reel-viewport"><div class="grid-container" id="grid"></div></div>
+        <div class="reel-viewport"><div class="grid-container" id="grid"></div><div id="pixi-reels"></div></div>
         
         <div id="btn-turbo-toggle"></div>
         <div id="ui-credit" class="value-text">100,000.00</div>
@@ -378,39 +385,49 @@
     </div>
 
    <script type="module">
+        // index.html 主程式（PixiJS 版）— 由 SLOT FORGE 產生
+        // 跟 DOM 版的差別只在「轉輪區」與「噴錢/彩帶」改由 pixi-view.js 繪製；
+        // 按鈕、跑馬燈、選單、賠率表、音效、背景影片切換、大廳溝通都跟 DOM 版同一套。
         import GameConfig from './config.js';
         import { SlotEngine } from './engine.js';
         import { GUIController } from './gui.js';
+        import Skin from './skin.js';
+        import * as PIXI from './pixi.min.mjs';
+        import { createPixiSlot } from './pixi-view.js';
 
-        let gui; 
+        let gui;
+        let slot; // Pixi 畫面：slot.reels（轉輪）/ slot.fx（噴錢、彩帶）
+        const PERF = Object.assign({ big: { coins: 40, confetti: 50 }, mid: { coins: 100 }, small: { coins: 30 } }, (Skin.effects && Skin.effects.tiers) || {});
+        const symImg = (id) => (GameConfig.assets.images.symbols[id] || '');
 
         const View = {
-            init: function() {
+            init: async function() {
                 this.grid = document.getElementById('grid');
                 this.initGridDOM();
+                slot = await createPixiSlot(PIXI, {
+                    config: GameConfig, skin: Skin,
+                    reelHost: document.getElementById('pixi-reels'),
+                    gridEl: this.grid,
+                    fxHost: document.getElementById('pixi-fx')
+                });
+                const start = [];
+                for (let c = 0; c < GameConfig.mechanics.cols; c++) {
+                    start.push([]);
+                    for (let r = 0; r < GameConfig.mechanics.rows; r++) start[c].push(Math.floor(Math.random() * 5) + 1);
+                }
+                slot.reels.setGrid(start);
                 this.generatePaytable();
             },
-            
+
+            // 欄位 div 只當「量尺」用（不畫任何東西）：Pixi 依它們的位置擺符號，
+            // 所以美術編輯器調的轉輪區寬度、上下左右位移都照樣生效。
             initGridDOM: function() {
                 this.grid.innerHTML = '';
                 for(let c = 0; c < GameConfig.mechanics.cols; c++) {
                     let colDiv = document.createElement('div'); colDiv.className = 'column'; colDiv.id = `col-${c}`;
                     this.grid.appendChild(colDiv);
-                    for(let r = 0; r < GameConfig.mechanics.rows; r++) {
-                        let el = this.createSymbol(Math.floor(Math.random() * 5) + 1); el.setAttribute('data-row', r);
-                        colDiv.appendChild(el);
-                    }
                 }
             },
-            
-            createSymbol: function(type) {
-                let div = document.createElement('div');
-                if (type === 11) div.className = `symbol sym-scatter`;
-                else if (type >= 20) div.className = `symbol sym-mul sym-${type}`; 
-                else { div.className = `symbol sym-${type}`; if(GameConfig.assets.images.symbols[type]) div.style.backgroundImage = `url('${GameConfig.assets.images.symbols[type]}')`; }
-                return div;
-            },
-
             generatePaytable: function() {
                 const container = document.getElementById('paytable-container');
                 container.innerHTML = '';
@@ -430,7 +447,7 @@
 
                 for (let i = 1; i <= 9; i++) {
                     let p = mockPayouts[i];
-                    let html = `<div class="paytable-item"><img src="s${i}.png"><div class="paytable-info">`; 
+                    let html = `<div class="paytable-item"><img src="${symImg(i)}"><div class="paytable-info">`; 
                     html += `<div class="paytable-row"><span class="paytable-mul">12+</span><span class="paytable-val">${p['12+']}</span></div>`;
                     html += `<div class="paytable-row"><span class="paytable-mul">10-11</span><span class="paytable-val">${p['10-11']}</span></div>`;
                     html += `<div class="paytable-row"><span class="paytable-mul">8-9</span><span class="paytable-val">${p['8-9']}</span></div>`;
@@ -440,7 +457,7 @@
 
                 // 2. SCATTER 免費遊戲
                 let scatterHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #00bfff; background: linear-gradient(90deg, #002244 0%, #001122 100%);">
-                    <div class="special-img"><img src="SCATTER.png"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">SCATTER</div></div>
+                    <div class="special-img"><img src="${symImg(11)}"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">SCATTER</div></div>
                     <div class="special-text"><div class="rule-title" style="color:#00bfff;">免費遊戲 (Free Game)</div>
                     <div class="desc-row"><span class="c-white">4 隻 聖甲蟲</span> <span class="c-cyan">15 局</span></div>
                     <div class="desc-row"><span class="c-white">5 隻 聖甲蟲</span> <span class="c-cyan">15 局 + 額外獎勵</span></div>
@@ -449,7 +466,7 @@
 
                 // 3. MULTIPLIER 專屬風暴水晶
                 let crystalHtml = `<div class="special-rule-block special-fixed-height" style="border-color: #00ffff; background: linear-gradient(90deg, #001a33 0%, #000a1a 100%);">
-                    <div class="special-img"><img src="x100.png" style="filter: drop-shadow(0 0 5px cyan);"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">風暴水晶</div></div>
+                    <div class="special-img"><img src="${symImg(23)}" style="filter: drop-shadow(0 0 5px cyan);"><div class="c-cyan" style="font-size:1.2vh; font-weight:bold; margin-top:2px;">風暴水晶</div></div>
                     <div class="special-text"><div class="rule-title" style="color:#00ffff;">風暴水晶 (Multiplier)</div>
                     <div class="desc-row"><span class="c-gray">隨機掉落</span> <span>可獲得 <span class="c-cyan">x2</span> 到 <span class="c-red">x500</span> 倍</span></div>
                     <div class="desc-row"><span class="c-gray">免費遊戲內</span> <span>參與爆分的倍數將被<span class="c-yellow">永久累積</span>!</span></div>
@@ -467,8 +484,7 @@
                 container.innerHTML += rulesHtml;
             },
 
-            wait: function(ms) { return new Promise(resolve => setTimeout(resolve, ms)); },
-            getSymbolEl: function(c, r) { return document.getElementById(`col-${c}`).querySelector(`div[data-row="${r}"]`); }
+            wait: function(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
         };
 
         function syncBalanceToLobby() {
@@ -521,77 +537,10 @@
             onFreeSpinUpdate: (left) => { document.getElementById('ui-free-spins').innerText = `FREE SPINS: ${left}`; },
 
             playSpinAnimation: async (gridData) => {
-                const spinPromises = [];
-                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
-                    const p = new Promise(async (resolve) => {
-                        let delay = gui.isTurboMode ? 0 : c * 300; 
-                        await View.wait(delay);
-
-                        let colDiv = document.getElementById(`col-${c}`);
-                        let oldElements = colDiv.querySelectorAll('.column > .symbol');
-                        let currentSyms = [];
-                        oldElements.forEach(el => {
-                            let match = el.className.match(/sym-(\d+)/);
-                            if (match) currentSyms.push(parseInt(match[1]));
-                            else if (el.classList.contains('sym-scatter')) currentSyms.push(11);
-                            else currentSyms.push(1);
-                        });
-                        if (currentSyms.length === 0) currentSyms = [1, 2, 3];
-
-                        let fillerSyms = [];
-                        for(let i=0; i<6; i++) { fillerSyms.push(Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1, Math.floor(Math.random() * 9) + 1); }
-
-                        let targetSyms = gridData[c];
-                        let stripContent = [...currentSyms, ...fillerSyms, ...targetSyms];
-                        let stripDiv = document.createElement('div');
-                        stripDiv.className = 'reel-strip';
-                        stripContent.forEach((type) => { let el = View.createSymbol(type); stripDiv.appendChild(el); });
-
-                        let totalSymbols = stripContent.length;
-                        let visibleSymbols = GameConfig.mechanics.rows;
-                        stripDiv.style.height = `${(totalSymbols / visibleSymbols) * 100}%`;
-
-                        colDiv.appendChild(stripDiv);
-                        oldElements.forEach(el => el.remove()); 
-                        void stripDiv.offsetWidth; 
-
-                        let movePct = ((currentSyms.length + fillerSyms.length) / totalSymbols) * 100;
-                        stripDiv.classList.add('moving');
-                        stripDiv.style.transform = `translateY(${movePct}%)`;
-
-                        let spinTime = gui.isTurboMode ? 1000 : 2000;
-                        if(gui.isTurboMode) stripDiv.style.transition = 'transform 1.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-                        else stripDiv.style.transition = 'transform 2.0s cubic-bezier(0.45, 0.05, 0.55, 0.95)';
-
-                        await View.wait(spinTime);
-
-                        stripDiv.style.transition = 'none';
-                        window.AudioMgr.playSFX('stop');
-                        if(!gui.isTurboMode) await View.wait(100);
-
-                        colDiv.innerHTML = '';
-                        targetSyms.forEach((type, r) => {
-                            let el = View.createSymbol(type);
-                            el.setAttribute('data-row', r);
-                            if(!gui.isTurboMode) {
-                                el.style.animation = 'landBounce 0.3s ease-out';
-                                // 🌟 終極修正：清空動畫，並用 translate3d 強制鎖死在 0 的位置
-                                setTimeout(() => { 
-                                    if (el) {
-                                        el.style.animation = ''; 
-                                        el.style.transform = 'translate3d(0px, 0px, 0px)';
-                                    }
-                                }, 350);
-                            } else {
-                                el.style.transform = 'translate3d(0px, 0px, 0px)';
-                            }
-                            colDiv.appendChild(el);
-                        });
-                        resolve();
-                    });
-                    spinPromises.push(p);
-                }
-                await Promise.all(spinPromises);
+                await slot.reels.spin(gridData, {
+                    turbo: gui.isTurboMode,
+                    onStop: () => window.AudioMgr.playSFX('stop')
+                });
                 await View.wait(gui.isTurboMode ? 100 : 300);
             },
 
@@ -617,77 +566,17 @@
                 if (winAmount >= engine.state.bet * 10) { window.CoinManager.fire(50, 0.5); } 
                 else if (winAmount > 0) { window.CoinManager.fire(15, 0.5); }
 
-                matches.forEach(key => {
-                    let [c, r] = key.split(','); let type = engine.state.gridData[c][r];
-                    let el = View.getSymbolEl(c, r);
-                    if(el) {
-                        el.style.animation = 'none'; el.style.transform = 'none';
-                        void el.offsetWidth; 
-                        el.style.animation = ''; el.style.transform = '';
-                        el.classList.add('anim-win');
-                        if ((type >= 1 && type <= 9) || (type >= 20 && type <= 23) || type === 11) el.classList.add('active');
-                    }
-                });
+                slot.reels.playWin(matches, engine.state.gridData);
 
                 await View.wait(1500); 
 
-                matches.forEach(key => {
-                    let [c, r] = key.split(','); let el = View.getSymbolEl(c, r);
-                    if(el) { 
-                        el.classList.remove('anim-win', 'active'); el.classList.add('anim-explode'); 
-                        let boom = document.createElement('div'); boom.className = 'vfx-explosion'; el.appendChild(boom); 
-                    }
-                });
+                slot.reels.explode(matches);
                 await View.wait(400);
             }, 
 
             playRefillAnimation: async (newGridData, matches) => {
-                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
-                    let colDiv = document.getElementById(`col-${c}`);
-                    let survivors = [];
-                    for(let r = 0; r < GameConfig.mechanics.rows; r++) { if(!matches.has(`${c},${r}`)) survivors.push({ oldR: r }); }
-                    
-                    colDiv.innerHTML = ''; 
-                    let targetSyms = newGridData[c];
-                    
-                    survivors.forEach((item, index) => {
-                        let newR = index; 
-                        let el = View.createSymbol(targetSyms[newR]);
-                        el.setAttribute('data-row', newR);
-                        let delta = item.oldR - newR; 
-                        el.style.transform = `translateY(-${delta * 100}%)`;
-                        colDiv.appendChild(el);
-                        void el.offsetWidth; 
-                        el.style.transform = `translateY(0)`; 
-                    });
-
-                    let missing = GameConfig.mechanics.rows - survivors.length;
-                    for(let k = 0; k < missing; k++) {
-                        let newR = survivors.length + k;
-                        let el = View.createSymbol(targetSyms[newR]);
-                        el.setAttribute('data-row', newR);
-                        let dropDist = (GameConfig.mechanics.rows + k) - newR; 
-                        el.style.transform = `translateY(-${dropDist * 100}%)`;
-                        colDiv.appendChild(el);
-                        void el.offsetWidth;
-                        el.style.transform = `translateY(0)`;
-                    }
-                }
-                
-                await View.wait(400); 
+                await slot.reels.refill(newGridData, matches);
                 window.AudioMgr.playSFX('stop');
-                
-                // 🌟 終極修正：掉落完畢後，關閉 transition 並強制 GPU 像素對齊
-                for(let c = 0; c < GameConfig.mechanics.cols; c++) {
-                    let colDiv = document.getElementById(`col-${c}`);
-                    if (colDiv) {
-                        colDiv.querySelectorAll('.symbol').forEach(el => {
-                            el.style.transition = 'none'; // 拔掉滑動效果
-                            el.style.transform = 'translate3d(0px, 0px, 0px)'; // 鎖死 GPU
-                        });
-                    }
-                }
-
                 await View.wait(300); 
             },
 
@@ -718,12 +607,7 @@
 
             onFreeGameTrigger: async (spins, scatterCount) => {
                 window.AudioMgr.playSFX('scatter');
-                document.querySelectorAll('.sym-scatter').forEach(el => {
-                    el.style.animation = 'none'; el.style.transform = 'none';
-                    void el.offsetWidth; 
-                    el.style.animation = ''; el.style.transform = '';
-                    el.classList.add('active');
-                });
+                slot.reels.activateType(11); // Scatter 全部播放 sprite 動畫
                 
                 gui.updateMessage(`★ 恭喜觸發！獲得 ${spins} 次免費遊戲！★`, "style-blue", "anim-pop");
                 
@@ -747,18 +631,18 @@
                 
                 if (totalWin >= engine.state.bet * 20) {
                     window.AudioMgr.playSFX('bigwin');
-                    fountain = setInterval(() => { window.CoinManager.fire(40, 0.5); }, 200);
-                    for(let i=0; i<50; i++) { setTimeout(window.spawnConfetti, i * 40); }
+                    fountain = setInterval(() => { window.CoinManager.fire(PERF.big.coins, 0.5); }, 200);
+                    for(let i=0; i<PERF.big.confetti; i++) { setTimeout(window.spawnConfetti, i * 40); }
                 } 
                 else if (totalWin >= engine.state.bet * 5) { 
                     window.AudioMgr.playSFX('bigwin');
-                    window.CoinManager.fire(100, 0.5);
-                    setTimeout(() => window.CoinManager.fire(80, 0.5), 600);
+                    window.CoinManager.fire(PERF.mid.coins, 0.5);
+                    setTimeout(() => window.CoinManager.fire(Math.max(1, Math.round(PERF.mid.coins * 0.8)), 0.5), 600);
                     window.spawnConfetti();
                 } 
                 else if (totalWin > 0) {
                     window.AudioMgr.playSFX('win_free');
-                    window.CoinManager.fire(30, 0.5);
+                    window.CoinManager.fire(PERF.small.coins, 0.5);
                 } 
                 else { window.AudioMgr.playSFX('click'); }
 
@@ -828,21 +712,19 @@
             }
         });
 
-        window.addEventListener('DOMContentLoaded', () => {
-            // 🌟 補上這一行，重整時才會主動喊話！
+        async function boot() {
+            // 🌟 主動向大廳請求同步資料（跟 DOM 版一樣一開始就喊）
             if (window.parent) { window.parent.postMessage({ type: 'requestInitData' }, '*'); }
-            // 1. 預載素材 (🌟 已補上 s1 ~ s5 的 Sprite 圖片)
-            const preloadSprites = [
-                'SCATTER_sprite.png', 'eye_sprite.png', 'explosion_sprite.png', 
-                's1_sprite.png', 's2_sprite.png', 's3_sprite.png', 's4_sprite.png', 's5_sprite.png'
-            ];
-            preloadSprites.forEach(src => { let img = new Image(); img.src = src; });
-            
-            // 2. 初始化畫面
-            View.init();
 
-            // 3. 將引擎交給 GUIController (由它統一管理按鈕與音效)
+            // 1. 初始化畫面（Pixi 載入素材、建立轉輪）
+            await View.init();
+
+            // 2. 將引擎交給 GUIController (由它統一管理按鈕與音效)
             gui = new GUIController(engine);
+
+            // 3. 噴錢/彩帶改由 Pixi 繪製：沿用 gui.js 原本呼叫的兩個全域介面，gui.js 一行都不用改
+            window.CoinManager = slot.fx.coinManagerAPI();
+            window.spawnConfetti = () => slot.fx.spawnConfetti();
 
             // 🌟 4. 終極音效互斥鎖 (安全攔截版)：確保 MG 與 FG 音樂絕對不會重疊，且不影響原系統！
             if (window.AudioMgr && window.AudioMgr.playBGM) {
@@ -866,7 +748,9 @@
                     originalPlayBGM.call(window.AudioMgr, trackName);
                 };
             }
-        });
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
+        else boot();
     </script>
 </body>
 </html>
